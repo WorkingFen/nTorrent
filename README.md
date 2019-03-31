@@ -16,7 +16,7 @@ Technologie, które wykorzystujemy/będziemy wykorzystywać:
 
 ## Autorzy
 - **Bochenek Mateusz** - [mbochene](https://github.com/mbochene)
-- **Najda Krzysztof** - [](https://github.com/...)
+- **Najda Krzysztof** - [KrzynKrzyn](https://github.com/KrzynKrzyn)
 - **Rzepka Karol** - [krzepka](https://github.com/krzepka)
 - **Zawadka Piotr** - [WorkingFen](https://github.com/WorkingFen)
 
