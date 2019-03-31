@@ -1,2 +1,2 @@
 # TINProject
-Projekt systemu udostępniania plików typu torrent
+Projekt polega na stworzeniu systemu udostępniania plików typu torrent.
