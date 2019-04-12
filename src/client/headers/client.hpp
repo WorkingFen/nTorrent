@@ -12,6 +12,7 @@
 
 class Client{
     int sockFd;
+    char fileDir[1000];
     struct sockaddr_in self, server;
 	fd_set ready;
 	struct timeval to;

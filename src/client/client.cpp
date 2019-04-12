@@ -1,5 +1,6 @@
 #include "headers/client.hpp"
 #include <stdexcept>
+#include <string.h>
 
 Client::Client(const char ipAddr[15], const int& port) : iSockets(0), oSockets(0)
 {
@@ -19,6 +20,9 @@ Client::Client(const char ipAddr[15], const int& port) : iSockets(0), oSockets(0
     if(listen(sockFd, 20) == -1)
         throw std::runtime_error ("listen call failed");
 
+    getcwd(fileDir, 1000);
+    strcat(fileDir, "/clientFiles");
+    
     std::cout << "Successfully connected and listening at: " << ipAddr << ":" << ntohs(self.sin_port) << std::endl;
 }
 
