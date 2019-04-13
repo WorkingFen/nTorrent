@@ -1,15 +1,16 @@
 #include "headers/server.hpp"
 
-server::Server::Server(const int& srv_port) {
+server::Server::Server(const char srv_ip[15], const int& srv_port) {
     socket_srv();
-    bind_srv(srv_port);
+    bind_srv(srv_ip, srv_port);
     listen_srv();
     while(true){
         accept_srv();
-        close_ct();
+        close_ct(client_socket.size()-1);
     }
 }
 
+// Create listener socket
 int server::Server::socket_srv() {
     listener = socket(AF_INET, SOCK_STREAM, 0);
     if(listener == -1) {
@@ -19,13 +20,14 @@ int server::Server::socket_srv() {
     return SRVNORM;
 }
 
-int server::Server::bind_srv(const int& srv_port) {
+// Bind socket to ip:port 
+int server::Server::bind_srv(const char srv_ip[15], const int& srv_port) {
     server.sin_family = AF_INET;
     server.sin_port = htons(srv_port);
-    inet_pton(AF_INET, "0.0.0.0", &server.sin_addr);
+    inet_pton(AF_INET, srv_ip, &server.sin_addr);
 
     if(bind(listener, (sockaddr*)&server, sizeof(server)) == -1) {
-        std::cerr << "Can't bind to IP/port";
+        std::cerr << "Can't bind to IP:port";
         return SRVERROR;
     }
 
@@ -40,6 +42,7 @@ int server::Server::bind_srv(const int& srv_port) {
     return SRVNORM;
 }
 
+// Start listening on listener socket, with SOMAXCONN connections
 int server::Server::listen_srv() {
     if(listen(listener, SOMAXCONN) == -1) {
         std::cerr << "Can't listen!";
@@ -48,11 +51,12 @@ int server::Server::listen_srv() {
     return SRVNORM;
 }
 
+// Accept new client
 int server::Server::accept_srv() {
     client_size = sizeof(client);
-    client_socket = accept(listener, (sockaddr*)&client, &client_size);
+    client_socket.push_back(accept(listener, (sockaddr*)&client, &client_size));
 
-    if(client_socket == -1) {
+    if(client_socket.back() == -1) {
         std::cerr << "Problem with client connecting!";
         return SRVERROR;
     }
@@ -70,22 +74,24 @@ int server::Server::accept_srv() {
             std::cout << host << " connected on " << ntohs(client.sin_port) << std::endl;
         }
 #endif
-        int bytes_rcv = read_srv(msg_buf);
+        int bytes_rcv = read_srv(client_socket.size()-1, msg_buf);
         if(bytes_rcv == SRVERROR) return SRVERROR;
         else if(bytes_rcv == SRVNORM) return SRVNORM;
-        write_srv(msg_buf, bytes_rcv+1);
+        write_srv(client_socket.size()-1, msg_buf, bytes_rcv+1);
     }
 }
 
-int server::Server::write_srv(const void* buffer, size_t msg_size) {
-    if(send(client_socket, buffer, msg_size, 0) == -1) return SRVERROR;
+// Write new message to client with ID: client_id
+int server::Server::write_srv(int client_id, const void* buffer, size_t msg_size) {
+    if(send(client_socket[client_id], buffer, msg_size, 0) == -1) return SRVERROR;
     else return SRVNORM;
 }
 
-int server::Server::read_srv(char* buffer) {
+// Read message from client with ID: client_id
+int server::Server::read_srv(int client_id, char* buffer) {
     memset(buffer, 0, sizeof(buffer));
 
-    int bytes_rcv = recv(client_socket, buffer, sizeof(buffer), 0);
+    int bytes_rcv = recv(client_socket[client_id], buffer, sizeof(buffer), 0);
     
     if(bytes_rcv == -1) {
         std::cerr << "There was a connection issue" << std::endl;
@@ -101,15 +107,20 @@ int server::Server::read_srv(char* buffer) {
     return bytes_rcv;
 }
 
-int server::Server::close_ct() {
-    if(close(client_socket) == -1) return SRVERROR;
+// Close connection with client whose ID: client_id
+int server::Server::close_ct(int client_id) {
+    if(close(client_socket[client_id]) == -1) return SRVERROR;
     else return SRVNORM;
 }
 
 server::Server::~Server() {
+#ifdef CTNAME
     memset(host, 0, NI_MAXHOST);
     memset(svc, 0, NI_MAXSERV);
+#endif
     memset(msg_buf, 0, sizeof(msg_buf));
     close(listener);
+    for(int i = 0; i < client_socket.size(); i++)
+        close_ct(i);
     std::cout << "Disconnected" << std::endl;
 }
