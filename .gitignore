@@ -30,3 +30,8 @@
 *.exe
 *.out
 *.app
+runServer
+runClient
+
+# VS Code files
+.vscode/
