@@ -11,12 +11,13 @@
 #include <iostream>
 
 class Client{
-    int sockFd, port, iSockets, oSockets;                    // listen socket; przydzielony port efemeryczny; liczba socketów pobierających/wysyłających dane (nie licząc komunikacji z serwerem)
+    int sockFd, port, clientSocketsNum, serverSocketsNum, maxFd;        // listen socket; przydzielony port efemeryczny; liczba socketów pobierających/wysyłających dane (nie licząc komunikacji z serwerem)
     char fileDir[1000];
     struct sockaddr_in self, server;
 	fd_set ready;
 	struct timeval to;
-	std::list<int> commSockets;                             // lista z socketami do komunikacji (należy zadbać, aby komunikaty z/do serwera były łatwe do odróżnienia od tych wysyłanych omiędzy klientami)
+	std::list<int> clientSockets;                             // lista z socketami pełniącymi role leechów/peerów
+    std::list<int> serverSockets;                             // lista z socketami pełniącymi role seederów/peerów                        
     enum class State {down, up, connected};                       // stan, w jakim znajduje się użytkownik (determinuje obsługę i/o)
     State state;              
     //  ?????? InputHandler inputHandler;                              // obsługuje input od użytkownika, może wywoływać np. connect
