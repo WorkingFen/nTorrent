@@ -1,8 +1,9 @@
 #include "headers/client.hpp"
 #include <stdexcept>
 #include <string.h>
+#include <algorithm>
 
-Client::Client(const char ipAddr[15], const int& port) : iSockets(0), oSockets(0), state(State::down)
+Client::Client(const char ipAddr[15], const int& port) : clientSocketsNum(0), serverSocketsNum(0), maxFd(0), state(State::down)
 {
     self.sin_family = AF_INET;
 
@@ -14,6 +15,8 @@ Client::Client(const char ipAddr[15], const int& port) : iSockets(0), oSockets(0
     if( (sockFd = socket(AF_INET, SOCK_STREAM, 0)) == -1)
         throw std::runtime_error ("socket call failed");
 
+    maxFd = sockFd+1;
+
     if(bind(sockFd, (struct sockaddr *) &self, sizeof self) == -1)
         throw std::runtime_error ("bind call failed");
 
@@ -23,11 +26,18 @@ Client::Client(const char ipAddr[15], const int& port) : iSockets(0), oSockets(0
     getcwd(fileDir, 1000);
     strcat(fileDir, "/clientFiles");
 
-    struct sockaddr_in x;
-    socklen_t y = sizeof(self);
-    getsockname(sockFd, (struct sockaddr *) &x, &y);
-
-    this->port = (int) ntohs(x.sin_port);
+    if(port == 0)
+    {
+        struct sockaddr_in x;
+        socklen_t y = sizeof(self);
+        getsockname(sockFd, (struct sockaddr *) &x, &y);
+        this->port = (int) ntohs(x.sin_port);
+    }
+    else
+    {
+        this->port=port;
+    }
+    
     state = State::up;
 
     std::cout << sockFd << std::endl;
@@ -49,38 +59,55 @@ void Client::connectTo(struct sockaddr_in &server)
 
     std::cout << "Conected to sbd" << std::endl;
     // obsługa błędów
-    commSockets.push_back(sock);
+    clientSockets.push_back(sock);
+
+    maxFd = std::max(maxFd,sock+1);
 
     // sprawdzenie czy nie serwer i inkrementacja oSockets
 }
 
 void Client::run()
 {
-    int numOfDescr;
     do{
-        numOfDescr=1;
         FD_ZERO(&ready);
         FD_SET(sockFd, &ready);
 
-        for(const int &i : commSockets)
-        {
+        for(const int &i : clientSockets)
             FD_SET(i, &ready);
-            numOfDescr++;
-        }
 
-        to.tv_sec = 5;                          /// przenieść póżniej do konstruktora
+        for(const int &i : serverSockets)
+            FD_SET(i, &ready);
+
+        to.tv_sec = 1;                          /// przenieść póżniej do konstruktora
         to.tv_usec = 0;
 
-        if ( (select(numOfDescr-1, &ready, (fd_set *)0, (fd_set *)0, &to)) == -1) {
+        if ( (select(maxFd, &ready, (fd_set *)0, (fd_set *)0, &to)) == -1) {
              throw std::runtime_error ("select call failed");
         }
 
-        if (FD_ISSET(sockFd, &ready) && oSockets<5)
+        std::cout << maxFd << " " << FD_ISSET(sockFd, &ready) << std::endl;
+
+        if (FD_ISSET(sockFd, &ready) && serverSocketsNum<5)
         {
             int newCommSock = accept(sockFd, (struct sockaddr *)0, (socklen_t *)0);
-            std::cout << "Accepted sbd" << std::endl;
-            commSockets.push_back(newCommSock);                             // jak rozróżniać iSockets od oSockets; możliwe, że trzeba będzie rozbić commSockets na 2 listy
-            oSockets++;
+            serverSockets.push_back(newCommSock);                             // jak rozróżniać iSockets od oSockets; możliwe, że trzeba będzie rozbić commSockets na 2 listy
+            serverSocketsNum++;
+            maxFd = std::max(maxFd,newCommSock+1);
+            std::cout << "serverSocketsNum = " << serverSocketsNum << std::endl;
+        }
+
+        for(auto it=serverSockets.begin(); it!=serverSockets.end();)                // pętla dla serverSockets -> TODO pętla dla cilentSockets
+        {
+            if(read(*it, 0, 0) <= 0)                                // tu msg
+            {
+                it = serverSockets.erase(it);
+                serverSocketsNum--;
+                close(*it);
+            }
+            else
+            {
+                ++it;
+            }
         }
 
     }while(true);
