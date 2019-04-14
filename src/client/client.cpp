@@ -110,6 +110,8 @@ void Client::run()
 {
     int loop = 10;
 
+    // registerSignalHandler(turnOff);
+
     do{
         FD_ZERO(&ready);
         FD_SET(sockFd, &ready);
@@ -167,7 +169,14 @@ void Client::run()
 
     turnOff();
 }
-
+void Client::registerSignalHandler(void (*handler)(int))
+{
+        struct sigaction sigIntHandler;
+        sigIntHandler.sa_handler = handler;
+        sigemptyset(&sigIntHandler.sa_mask);
+        sigIntHandler.sa_flags = 0;
+        sigaction(SIGINT, &sigIntHandler, NULL);
+}
 /*
 void Client::handleMessage(int msg, int src_socket)
 {
