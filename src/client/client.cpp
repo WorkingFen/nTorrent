@@ -110,17 +110,20 @@ void Client::run()
             std::cout << "serverSocketsNum = " << serverSocketsNum << std::endl;
         }
 
+        int currSock;
+
         for(auto it=serverSockets.begin(); it!=serverSockets.end();)                // pętla dla serverSockets -> TODO pętla dla cilentSockets
         {
-            if(FD_ISSET(*it, &ready))
+            currSock=*it;
+            if(FD_ISSET(currSock, &ready))
             {
-                msg::Message msg = msg::readMessage(*it);
+                msg::Message msg = msg::readMessage(currSock);
 
                 if(msg.type == msg::Message::Type::disconnect_client)                                // tu msg
                 {
                     it = serverSockets.erase(it);
                     serverSocketsNum--;
-                    close(*it);
+                    close(currSock);
 
                     std::cout << "Connection severed" << std::endl;
                 }
