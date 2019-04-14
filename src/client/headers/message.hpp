@@ -26,6 +26,10 @@ struct Message
     Type type = Type::broken;
     int buf_length = 0;
     std::vector<char> buffer;
+
+    Message() {}
+    Message(Type t): type(t) {}
+    Message(int t): type(static_cast<Type>(t)) {}
 };
 
 int sendMessage(int dst_socket, Message &message)
@@ -61,7 +65,7 @@ Message readMessage(int socketFd)
     while(bytesRead < length)
     {
         int readReturn = read(socketFd, buf_msg, length);
-        if(readReturn < 1) return Message();//throw std::runtime_error("Unsuccessful read");
+        if(readReturn < 1) return Message(-1);//throw std::runtime_error("Unsuccessful read");
         bytesRead += readReturn;
     }
 
@@ -73,7 +77,7 @@ Message readMessage(int socketFd)
     while(bytesRead < length)
     {
         int readReturn = read(socketFd, buf_length, length);
-        if(readReturn < 1) return Message();//throw std::runtime_error("Unsuccessful read");
+        if(readReturn < 1) return Message(-1);//throw std::runtime_error("Unsuccessful read");
         bytesRead += readReturn;
     }
 
@@ -85,7 +89,7 @@ Message readMessage(int socketFd)
     while(bytesRead < msg.buf_length)
     {
         int readReturn = read(socketFd, &buffer[0], msg.buf_length);
-        if(readReturn < 1) return Message();//throw std::runtime_error("Unsuccessful read");
+        if(readReturn < 1) return Message(-1);//throw std::runtime_error("Unsuccessful read");
         bytesRead += readReturn;
     }
 
