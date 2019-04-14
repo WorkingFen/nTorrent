@@ -11,10 +11,10 @@ server: server/headers/server.hpp server/server.cpp runServer.cpp
 all: client server
 
 ctclean:
-	rm -r runClient clientFiles
+	rm -r runClient $(PWD)/clientFiles
 
 srvclean:
 	rm -r runServer
 
 clean:
-	rm -r runClient runServer clientFiles
+	rm -r runClient runServer $(PWD)/clientFiles

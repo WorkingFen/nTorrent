@@ -1,22 +1,25 @@
 #include "headers/server.hpp"
 
 server::Server::Server(const char srv_ip[15], const int& srv_port) {
+    timeout.tv_sec = 1;
+    timeout.tv_usec = 0;
     socket_srv();
     bind_srv(srv_ip, srv_port);
     listen_srv();
     while(true){
+        select_cts();
         accept_srv();
-        close_ct();
+        check_cts();
     }
 }
 
 // Create listener socket
 int server::Server::socket_srv() {
-    listener = socket(AF_INET, SOCK_STREAM, 0);
-    if(listener == -1) {
+    if((listener = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
         std::cerr << "Can't create a socket!";
         return SRVERROR;
     }
+    max_fd = listener + 1;
     return SRVNORM;
 }
 
@@ -24,7 +27,10 @@ int server::Server::socket_srv() {
 int server::Server::bind_srv(const char srv_ip[15], const int& srv_port) {
     server.sin_family = AF_INET;
     server.sin_port = htons(srv_port);
-    inet_pton(AF_INET, srv_ip, &server.sin_addr);
+    if(inet_pton(AF_INET, srv_ip, &server.sin_addr) == -1) {
+        std::cerr << "Improper IPv4 address";
+        return SRVERROR;
+    }
 
     if(bind(listener, (sockaddr*)&server, sizeof(server)) == -1) {
         std::cerr << "Can't bind to IP:port";
@@ -51,35 +57,66 @@ int server::Server::listen_srv() {
     return SRVNORM;
 }
 
-// Accept new client
-int server::Server::accept_srv() {
-    client_size = sizeof(client);
-    clients_sockets.push_back(accept(listener, (sockaddr*)&client, &client_size));
+// Select clients
+int server::Server::select_cts() {
+    FD_ZERO(&bits_fd);
+    FD_SET(listener, &bits_fd);
 
-    if(clients_sockets.size() == 1) cts_it = clients_sockets.begin();
+    for(auto i : clients_sockets)
+        FD_SET(i, &bits_fd);
 
-    if(clients_sockets.back() == -1) {
-        std::cerr << "Problem with client connecting!";
+    if(select(max_fd, &bits_fd, (fd_set*)0, (fd_set*)0, &timeout) == -1) {
+        std::cerr << "Select call failed" << std::endl;
         return SRVERROR;
     }
-    else while(true) {
-#ifdef CTNAME
-        memset(host, 0, NI_MAXHOST);
-        memset(svc, 0, NI_MAXSERV);
-        int result = getnameinfo((sockaddr*)&client, sizeof(client), host, NI_MAXHOST, svc, NI_MAXSERV, 0);
+    return SRVNORM;
+}
 
-        if(result) {
-            std::cout << host << " connected on " << svc << std::endl;
+// Accept new client
+int server::Server::accept_srv() {
+    if(FD_ISSET(listener, &bits_fd)){
+        sockaddr_in client;
+        socklen_t client_size = sizeof(client);
+        int ct_socket = accept(listener, (sockaddr*)&client, &client_size);
+        clients_sockets.push_back(ct_socket);
+        max_fd = std::max(max_fd, ct_socket+1);
+
+        if(clients_sockets.back() == -1) {
+            std::cerr << "Problem with client connecting!";
+            return SRVERROR;
         }
         else {
-            inet_ntop(AF_INET, &client.sin_addr, host, NI_MAXHOST);
-            std::cout << host << " connected on " << ntohs(client.sin_port) << std::endl;
-        }
+#ifdef CTNAME
+            memset(host, 0, NI_MAXHOST);
+            memset(svc, 0, NI_MAXSERV);
+
+            if(getnameinfo((sockaddr*)&client, sizeof(client), host, NI_MAXHOST, svc, NI_MAXSERV, 0)) {
+                std::cout << host << " connected on " << svc << std::endl;
+            }
+            else {
+                inet_ntop(AF_INET, &client.sin_addr, host, NI_MAXHOST);
+                std::cout << host << " connected on " << ntohs(client.sin_port) << std::endl;
+            }
 #endif
+        }
+        return SRVNORM;
+    }
+    return SRVNOCONN;
+}
+
+// Check clients' messages
+void server::Server::check_cts() {
+    for(cts_it = clients_sockets.begin(); cts_it != clients_sockets.end(); ) {
         int bytes_rcv = read_srv(msg_buf);
-        if(bytes_rcv == SRVERROR) return SRVERROR;
-        else if(bytes_rcv == SRVNORM) return SRVNORM;
-        write_srv(msg_buf, bytes_rcv+1);
+        if(bytes_rcv == SRVERROR || bytes_rcv == SRVNORM) {
+            close_ct();
+            continue;
+        }
+        if(write_srv(msg_buf, bytes_rcv+1) == SRVERROR) {
+            close_ct();
+            continue;
+        }
+        ++cts_it;
     }
 }
 
@@ -124,6 +161,10 @@ server::Server::~Server() {
     memset(svc, 0, NI_MAXSERV);
 #endif
     memset(msg_buf, 0, sizeof(msg_buf));
+    while(clients_sockets.size() != 0) {
+        cts_it = clients_sockets.begin();
+        close_ct();
+    }
     close(listener);
     std::cout << "Disconnected" << std::endl;
 }
