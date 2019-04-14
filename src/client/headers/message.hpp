@@ -30,6 +30,11 @@ struct Message
     Message() {}
     Message(Type t): type(t) {}
     Message(int t): type(static_cast<Type>(t)) {}
+
+    Message(Type t, char* b, int bl): type(t), buf_length(bl)
+    {
+        buffer = std::vector<char>(b, b+bl);
+    }
 };
 
 int sendMessage(int dst_socket, Message &message)
