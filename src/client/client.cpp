@@ -77,7 +77,7 @@ void Client::connectTo(struct sockaddr_in &address)
     if(address.sin_addr.s_addr != server.sin_addr.s_addr)
         clientSocketsNum++;
 
-    //sendMessage(100, sock);
+    //sendMessage(sock, Message(Message::Type::keep_alive));
 }
 
 void Client::run()
@@ -92,7 +92,7 @@ void Client::run()
         for(const int &i : serverSockets)
             FD_SET(i, &ready);
 
-        to.tv_sec = 1;                          /// przenieść póżniej do konstruktora
+        to.tv_sec = 1;
         to.tv_usec = 0;
 
         if ( (select(maxFd, &ready, (fd_set *)0, (fd_set *)0, &to)) == -1) {
@@ -104,26 +104,23 @@ void Client::run()
         if (FD_ISSET(sockFd, &ready) && serverSocketsNum<5)
         {
             int newCommSock = accept(sockFd, (struct sockaddr *)0, (socklen_t *)0);
-            serverSockets.push_back(newCommSock);                             // jak rozróżniać iSockets od oSockets; możliwe, że trzeba będzie rozbić commSockets na 2 listy
+            serverSockets.push_back(newCommSock);
             serverSocketsNum++;
             maxFd = std::max(maxFd,newCommSock+1);
             std::cout << "serverSocketsNum = " << serverSocketsNum << std::endl;
         }
 
-        int currSock;
-
         for(auto it=serverSockets.begin(); it!=serverSockets.end();)                // pętla dla serverSockets -> TODO pętla dla cilentSockets
         {
-            currSock=*it;
-            if(FD_ISSET(currSock, &ready))
+            if(FD_ISSET(*it, &ready))
             {
-                msg::Message msg = msg::readMessage(currSock);
+                msg::Message msg = msg::readMessage(*it);
 
                 if(msg.type == msg::Message::Type::disconnect_client)                                // tu msg
                 {
                     it = serverSockets.erase(it);
                     serverSocketsNum--;
-                    close(currSock);
+                    close(*it);
 
                     std::cout << "Connection severed" << std::endl;
                 }
