@@ -18,6 +18,8 @@
 #define SRVNORM 0
 #define SRVERROR -1
 
+#define _DEBUG
+
 #ifdef _DEBUG
     #define SOCKNAME
     #define CTNAME
@@ -52,15 +54,15 @@ namespace server {
             Server(const char srv_ip[15], const int& srv_port);
             ~Server();
 
-            int socket_srv();
-            int bind_srv(const char srv_ip[15], const int& srv_port);
-            int listen_srv();
-            int select_cts();
-            int accept_srv();
+            void socket_srv();
+            void bind_srv(const char srv_ip[15], const int& srv_port);
+            void listen_srv();
+            void select_cts();
+            void accept_srv();
             void check_cts();
             int write_srv(const void* buffer, size_t msg_size);
             int read_srv(char* buffer);
-            int close_ct();
+            void close_ct();
     };
 }
 
