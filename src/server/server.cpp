@@ -160,11 +160,11 @@ int server::Server::read_srv(char* buffer) {
 
 // Close connection with client whose ID: client_id
 void server::Server::close_ct() {
-    cts_it = clients_sockets.erase(cts_it);
     if(close(*cts_it) == -1) {
         throw std::runtime_error("Couldn't close client's socket");
         //return SRVERROR;
     }
+    else cts_it = clients_sockets.erase(cts_it);
     //return SRVNORM;
 }
 
