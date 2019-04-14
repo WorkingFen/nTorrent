@@ -32,6 +32,9 @@ class Client{
     void connectTo(struct sockaddr_in &server);             // łączy się z klientem o podanym adresie (serwer powinien przesyłać gotową strukturę do klienta) lub z serwerem torrent
     void turnOff();                                         // metoda kończąca wszystkie połączenia
     void run();                                             // pętla z selectem
+
+    //void handleMessage(Message msg);
+    //void disconnectFrom(int socket);
 };
 
 #endif

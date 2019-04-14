@@ -7,7 +7,7 @@ int main()
     try{
         Client client1("127.0.0.1", 0);
         
-        /*
+        
         Client client2("127.1.0.1", 0);
         Client client3("127.2.0.1", 0);
         struct sockaddr_in x;
@@ -16,10 +16,10 @@ int main()
         client2.connectTo(x);
         client3.connectTo(x);
         client1.run();
-        */
+        
         
     }
-    catch(std::exception& e) { cout << e.what() << endl;}
+    catch(std::exception& e) { std::cerr << e.what() << std::endl;}
 
     return 0;
 }
