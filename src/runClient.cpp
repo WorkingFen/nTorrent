@@ -16,7 +16,6 @@ int main()
         client2.connectTo(x);
         client3.connectTo(x);
         client1.run();
-        
     }
     catch(std::exception& e) { std::cerr << e.what() << std::endl;}
 

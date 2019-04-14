@@ -9,6 +9,7 @@
 #include <unistd.h>
 #include <list>
 #include <iostream>
+#include <signal.h>
 
 class Client{
     int sockFd, port, clientSocketsNum, serverSocketsNum, maxFd;        // listen socket; przydzielony port efemeryczny; liczba socketów pobierających/wysyłających dane (nie licząc komunikacji z serwerem)
@@ -35,6 +36,8 @@ class Client{
 
     //void handleMessage(Message msg);
     //void disconnectFrom(int socket);
+
+    void registerSignalHandler(void (*handler)(int));
 };
 
 #endif

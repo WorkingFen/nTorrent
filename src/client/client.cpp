@@ -23,6 +23,10 @@ Client::Client(const char ipAddr[15], const int& port, const char serverIpAddr[1
 
     maxFd = sockFd+1;
 
+    int enable = 1;
+    if (setsockopt(sockFd, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(int)) < 0)
+        std::cerr<<"setting SO_REUSEADDR option on socket "<<sockFd<<" failed"<<std::endl;   
+
     if(bind(sockFd, (struct sockaddr *) &self, sizeof self) == -1)
         throw std::runtime_error ("bind call failed");
 
@@ -52,7 +56,29 @@ Client::Client(const char ipAddr[15], const int& port, const char serverIpAddr[1
 
 void Client::turnOff()
 {
-    
+    msg::Message message;
+    message.type = msg::Message::Type::disconnect_client;
+    int result;
+
+    for(auto it = clientSockets.begin(); it != clientSockets.end(); ++it){
+        int m = msg::sendMessage(*it, message);
+        result = close(*it);
+        if(result == -1){
+            std::cerr<<"Closing "<<*it<<" socket failed"<<std::endl;
+            continue;
+        }
+        std::cout<<"Closed "<<*it<<" client socket"<<std::endl;
+    }
+
+    for(auto it = serverSockets.begin(); it != serverSockets.end(); ++it){
+        int m = msg::sendMessage(*it, message);
+        result = close(*it);
+        if(result == -1){
+            std::cerr<<"Closing "<<*it<<" socket failed"<<std::endl;
+            continue;
+        }
+        std::cout<<"Closed "<<*it<<" server socket"<<std::endl;
+    }
 }
 
 Client::~Client()
@@ -77,11 +103,15 @@ void Client::connectTo(struct sockaddr_in &address)
     if(address.sin_addr.s_addr != server.sin_addr.s_addr)
         clientSocketsNum++;
 
-    //sendMessage(100, sock);
+    //sendMessage(sock, Message(Message::Type::keep_alive));
 }
 
 void Client::run()
 {
+    int loop = 10;
+
+    // registerSignalHandler(turnOff);
+
     do{
         FD_ZERO(&ready);
         FD_SET(sockFd, &ready);
@@ -92,7 +122,7 @@ void Client::run()
         for(const int &i : serverSockets)
             FD_SET(i, &ready);
 
-        to.tv_sec = 1;                          /// przenieść póżniej do konstruktora
+        to.tv_sec = 1;
         to.tv_usec = 0;
 
         if ( (select(maxFd, &ready, (fd_set *)0, (fd_set *)0, &to)) == -1) {
@@ -104,26 +134,23 @@ void Client::run()
         if (FD_ISSET(sockFd, &ready) && serverSocketsNum<5)
         {
             int newCommSock = accept(sockFd, (struct sockaddr *)0, (socklen_t *)0);
-            serverSockets.push_back(newCommSock);                             // jak rozróżniać iSockets od oSockets; możliwe, że trzeba będzie rozbić commSockets na 2 listy
+            serverSockets.push_back(newCommSock);
             serverSocketsNum++;
             maxFd = std::max(maxFd,newCommSock+1);
             std::cout << "serverSocketsNum = " << serverSocketsNum << std::endl;
         }
 
-        int currSock;
-
         for(auto it=serverSockets.begin(); it!=serverSockets.end();)                // pętla dla serverSockets -> TODO pętla dla cilentSockets
         {
-            currSock=*it;
-            if(FD_ISSET(currSock, &ready))
+            if(FD_ISSET(*it, &ready))
             {
-                msg::Message msg = msg::readMessage(currSock);
+                msg::Message msg = msg::readMessage(*it);
 
                 if(msg.type == msg::Message::Type::disconnect_client)                                // tu msg
                 {
                     it = serverSockets.erase(it);
                     serverSocketsNum--;
-                    close(currSock);
+                    close(*it);
 
                     std::cout << "Connection severed" << std::endl;
                 }
@@ -138,9 +165,18 @@ void Client::run()
             } 
         }
 
-    }while(true);
-}
+    }while(loop--);
 
+    turnOff();
+}
+void Client::registerSignalHandler(void (*handler)(int))
+{
+        struct sigaction sigIntHandler;
+        sigIntHandler.sa_handler = handler;
+        sigemptyset(&sigIntHandler.sa_mask);
+        sigIntHandler.sa_flags = 0;
+        sigaction(SIGINT, &sigIntHandler, NULL);
+}
 /*
 void Client::handleMessage(int msg, int src_socket)
 {
@@ -150,14 +186,17 @@ void Client::handleMessage(int msg, int src_socket)
         default: std::cerr << "Unknown message" << std::endl;
     }
 }*/
+
 /*
 void Client::disconnectFrom(int socket)
 {
     auto it = find(serverSockets.begin(), serverSockets.end(), socket);
 
-    if(it == serverSockets.end()) std::cerr << "disconnect unsuccessful" << std::endl;
+    if(it == serverSockets.end()) std::cerr << "Closing "<<socket<<" unsuccessful" << std::endl;
 
     close(*it);
     serverSockets.erase(it);
     //update maxFd ???
 }*/
+
+
