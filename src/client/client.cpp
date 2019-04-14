@@ -77,9 +77,7 @@ void Client::connectTo(struct sockaddr_in &address)
     if(address.sin_addr.s_addr != server.sin_addr.s_addr)
         clientSocketsNum++;
 
-    std::cout << clientSocketsNum << std::endl;
-
-    sendMessage(100, sock);
+    //sendMessage(100, sock);
 }
 
 void Client::run()
@@ -114,20 +112,27 @@ void Client::run()
 
         for(auto it=serverSockets.begin(); it!=serverSockets.end();)                // pętla dla serverSockets -> TODO pętla dla cilentSockets
         {
-            msg::Message msg = msg::readMessage(*it);
-
-            if(msg.type == msg::Message::Type::disconnect_client)                                // tu msg
+            if(FD_ISSET(*it, &ready))
             {
-                it = serverSockets.erase(it);
-                serverSocketsNum--;
-                close(*it);
+                msg::Message msg = msg::readMessage(*it);
 
-                std::cout << "Connection severed" << std::endl;
+                if(msg.type == msg::Message::Type::disconnect_client)                                // tu msg
+                {
+                    it = serverSockets.erase(it);
+                    serverSocketsNum--;
+                    close(*it);
+
+                    std::cout << "Connection severed" << std::endl;
+                }
+                else
+                {
+                    ++it;
+                }
             }
             else
             {
                 ++it;
-            }
+            } 
         }
 
     }while(true);
