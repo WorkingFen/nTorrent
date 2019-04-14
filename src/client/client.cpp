@@ -103,15 +103,12 @@ void Client::connectTo(struct sockaddr_in &address)
     if(address.sin_addr.s_addr != server.sin_addr.s_addr)
         clientSocketsNum++;
 
-    //sendMessage(sock, Message(Message::Type::keep_alive));
+    sendMessage(sock, msg::Message(100));
 }
 
 void Client::run()
 {
-    int loop = 10;
-
     // registerSignalHandler(turnOff);
-
     do{
         FD_ZERO(&ready);
         FD_SET(sockFd, &ready);
@@ -145,12 +142,12 @@ void Client::run()
             if(FD_ISSET(*it, &ready))
             {
                 msg::Message msg = msg::readMessage(*it);
-
+                std::cout << (int) msg.type << std::endl;
                 if(msg.type == msg::Message::Type::disconnect_client)                                // tu msg
                 {
+                    close(*it);
                     it = serverSockets.erase(it);
                     serverSocketsNum--;
-                    close(*it);
 
                     std::cout << "Connection severed" << std::endl;
                 }
@@ -162,12 +159,11 @@ void Client::run()
             else
             {
                 ++it;
-            } 
+            }
         }
+    }while(true);
 
-    }while(loop--);
-
-    turnOff();
+    //turnOff();
 }
 void Client::registerSignalHandler(void (*handler)(int))
 {

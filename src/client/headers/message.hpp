@@ -37,7 +37,7 @@ struct Message
     }
 };
 
-int sendMessage(int dst_socket, Message &message)
+int sendMessage(int dst_socket, Message message)
 {
     if(write(dst_socket, &message.type, sizeof(message.type)) < 0)
     {
