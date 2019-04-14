@@ -1,7 +1,9 @@
 #include "headers/client.hpp"
+#include "headers/message.hpp"
 #include <stdexcept>
 #include <string.h>
 #include <algorithm>
+
 
 Client::Client(const char ipAddr[15], const int& port) : clientSocketsNum(0), serverSocketsNum(0), maxFd(0), state(State::down)
 {
@@ -32,6 +34,7 @@ Client::Client(const char ipAddr[15], const int& port) : clientSocketsNum(0), se
         socklen_t y = sizeof(self);
         getsockname(sockFd, (struct sockaddr *) &x, &y);
         this->port = (int) ntohs(x.sin_port);
+        self.sin_port = x.sin_port;
     }
     else
     {
@@ -44,10 +47,15 @@ Client::Client(const char ipAddr[15], const int& port) : clientSocketsNum(0), se
     std::cout << "Successfully connected and listening at: " << ipAddr << ":" << this->port << std::endl;
 }
 
+void Client::turnOff()
+{
+    
+}
+
 Client::~Client()
 {
     close(sockFd);
-    std::cout << "Disconnected" << std::endl;
+    std::cout << "Disconnected" << std::endl;  
 }
 
 void Client::connectTo(struct sockaddr_in &server)
@@ -98,11 +106,15 @@ void Client::run()
 
         for(auto it=serverSockets.begin(); it!=serverSockets.end();)                // pętla dla serverSockets -> TODO pętla dla cilentSockets
         {
-            if(read(*it, 0, 0) <= 0)                                // tu msg
+            int msg = readMessage(*it);
+            std::cout << msg << std::endl;
+            if(msg == 100)                                // tu msg
             {
                 it = serverSockets.erase(it);
                 serverSocketsNum--;
                 close(*it);
+
+                std::cout << "Connection severed" << std::endl;
             }
             else
             {
@@ -112,3 +124,24 @@ void Client::run()
 
     }while(true);
 }
+
+/*
+void Client::handleMessage(int msg, int src_socket)
+{
+    switch(msg)
+    {
+        case 100: disconnectFrom(src_socket); break;
+        default: std::cerr << "Unknown message" << std::endl;
+    }
+}*/
+/*
+void Client::disconnectFrom(int socket)
+{
+    auto it = find(serverSockets.begin(), serverSockets.end(), socket);
+
+    if(it == serverSockets.end()) std::cerr << "disconnect unsuccessful" << std::endl;
+
+    close(*it);
+    serverSockets.erase(it);
+    //update maxFd ???
+}*/
