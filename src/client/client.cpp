@@ -108,7 +108,8 @@ void Client::connectTo(struct sockaddr_in &address)
 
 void Client::run()
 {
-    int loop = 100;
+    int loop = 10;
+
     do{
         FD_ZERO(&ready);
         FD_SET(sockFd, &ready);
