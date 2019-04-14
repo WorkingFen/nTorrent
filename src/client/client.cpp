@@ -106,9 +106,9 @@ void Client::run()
 
         for(auto it=serverSockets.begin(); it!=serverSockets.end();)                // pętla dla serverSockets -> TODO pętla dla cilentSockets
         {
-            int msg = readMessage(*it);
-            std::cout << msg << std::endl;
-            if(msg == 100)                                // tu msg
+            msg::Message msg = msg::readMessage(*it);
+
+            if(msg.type == msg::Message::Type::disconnect_client)                                // tu msg
             {
                 it = serverSockets.erase(it);
                 serverSocketsNum--;
