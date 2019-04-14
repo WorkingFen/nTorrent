@@ -5,14 +5,18 @@
 #include <algorithm>
 
 
-Client::Client(const char ipAddr[15], const int& port) : clientSocketsNum(0), serverSocketsNum(0), maxFd(0), state(State::down)
+void Client::prepareSockaddrStruct(struct sockaddr_in& x, const char ipAddr[15], const int& port)
 {
-    self.sin_family = AF_INET;
+    x.sin_family = AF_INET;
+    if( (inet_pton(AF_INET, ipAddr, &x.sin_addr)) <= 0)
+        throw std::invalid_argument("Improper IPv4 address: " + std::string(ipAddr));
+    x.sin_port = htons(port);
+}
 
-    if( (inet_pton(AF_INET, ipAddr, &self.sin_addr)) == -1)
-        throw std::invalid_argument("Improper IP address");
-    
-    self.sin_port = htons(port);
+Client::Client(const char ipAddr[15], const int& port, const char serverIpAddr[15], const int& serverPort) : clientSocketsNum(0), serverSocketsNum(0), maxFd(0), state(State::down)
+{
+    prepareSockaddrStruct(self, ipAddr, port);
+    prepareSockaddrStruct(server, serverIpAddr, serverPort);
 
     if( (sockFd = socket(AF_INET, SOCK_STREAM, 0)) == -1)
         throw std::runtime_error ("socket call failed");
@@ -43,7 +47,6 @@ Client::Client(const char ipAddr[15], const int& port) : clientSocketsNum(0), se
     
     state = State::up;
 
-    std::cout << sockFd << std::endl;
     std::cout << "Successfully connected and listening at: " << ipAddr << ":" << this->port << std::endl;
 }
 
@@ -58,20 +61,25 @@ Client::~Client()
     std::cout << "Disconnected" << std::endl;  
 }
 
-void Client::connectTo(struct sockaddr_in &server)
+void Client::connectTo(struct sockaddr_in &address)
 {
     int sock = socket(AF_INET, SOCK_STREAM, 0);
-    // obsługa błędów - dodać poprawne zamknięcie
-    if(connect(sock, (struct sockaddr *) &server, sizeof server) == -1)
+    
+    if(connect(sock, (struct sockaddr *) &address, sizeof address) == -1)         // TODO obsługa błędów - dodać poprawne zamknięcie
         throw std::runtime_error ("connect call failed");
 
     std::cout << "Conected to sbd" << std::endl;
-    // obsługa błędów
-    clientSockets.push_back(sock);
+
+    clientSockets.push_back(sock);              // TODO obsługa błędów
 
     maxFd = std::max(maxFd,sock+1);
 
-    // sprawdzenie czy nie serwer i inkrementacja oSockets
+    if(address.sin_addr.s_addr != server.sin_addr.s_addr)
+        clientSocketsNum++;
+
+    std::cout << clientSocketsNum << std::endl;
+
+    sendMessage(100, sock);
 }
 
 void Client::run()

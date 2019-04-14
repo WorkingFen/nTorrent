@@ -25,9 +25,9 @@ class Client{
     /*
         funkcje do obsługi msg
     */
-
+    void prepareSockaddrStruct(struct sockaddr_in& x, const char ipAddr[15], const int& port);
     public:
-    Client(const char ipAddr[15], const int& port);         // tworzy socketa, który będzie nasłuchiwał
+    Client(const char ipAddr[15], const int& port, const char serverIpAddr[15], const int& serverPort=2200);         // tworzy socketa, który będzie nasłuchiwał
     ~Client();
     void connectTo(struct sockaddr_in &server);             // łączy się z klientem o podanym adresie (serwer powinien przesyłać gotową strukturę do klienta) lub z serwerem torrent
     void turnOff();                                         // metoda kończąca wszystkie połączenia
