@@ -23,6 +23,10 @@ Client::Client(const char ipAddr[15], const int& port, const char serverIpAddr[1
 
     maxFd = sockFd+1;
 
+    int enable = 1;
+    if (setsockopt(sockFd, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(int)) < 0)
+        std::cerr<<"setting SO_REUSEADDR option on socket "<<sockFd<<" failed"<<std::endl;   
+
     if(bind(sockFd, (struct sockaddr *) &self, sizeof self) == -1)
         throw std::runtime_error ("bind call failed");
 
@@ -52,7 +56,29 @@ Client::Client(const char ipAddr[15], const int& port, const char serverIpAddr[1
 
 void Client::turnOff()
 {
-    
+    msg::Message message;
+    message.type = msg::Message::Type::disconnect_client;
+    int result;
+
+    for(auto it = clientSockets.begin(); it != clientSockets.end(); ++it){
+        int m = msg::sendMessage(*it, message);
+        result = close(*it);
+        if(result == -1){
+            std::cerr<<"Closing "<<*it<<" socket failed"<<std::endl;
+            continue;
+        }
+        std::cout<<"Closed "<<*it<<" client socket"<<std::endl;
+    }
+
+    for(auto it = serverSockets.begin(); it != serverSockets.end(); ++it){
+        int m = msg::sendMessage(*it, message);
+        result = close(*it);
+        if(result == -1){
+            std::cerr<<"Closing "<<*it<<" socket failed"<<std::endl;
+            continue;
+        }
+        std::cout<<"Closed "<<*it<<" server socket"<<std::endl;
+    }
 }
 
 Client::~Client()
@@ -82,6 +108,7 @@ void Client::connectTo(struct sockaddr_in &address)
 
 void Client::run()
 {
+    int loop = 100;
     do{
         FD_ZERO(&ready);
         FD_SET(sockFd, &ready);
@@ -138,7 +165,9 @@ void Client::run()
             } 
         }
 
-    }while(true);
+    }while(loop--);
+
+    turnOff();
 }
 
 /*
@@ -150,14 +179,17 @@ void Client::handleMessage(int msg, int src_socket)
         default: std::cerr << "Unknown message" << std::endl;
     }
 }*/
+
 /*
 void Client::disconnectFrom(int socket)
 {
     auto it = find(serverSockets.begin(), serverSockets.end(), socket);
 
-    if(it == serverSockets.end()) std::cerr << "disconnect unsuccessful" << std::endl;
+    if(it == serverSockets.end()) std::cerr << "Closing "<<socket<<" unsuccessful" << std::endl;
 
     close(*it);
     serverSockets.erase(it);
     //update maxFd ???
 }*/
+
+
