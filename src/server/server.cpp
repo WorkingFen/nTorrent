@@ -158,7 +158,7 @@ int server::Server::read_srv(char* buffer) {
 
     // Display message
     //std::cout << "Received: " << std::string(buffer, 0, bytes_rcv) << std::endl;
-    return msg.buf_length;
+    return msg.buf_length + 8;
 }
 
 // Close connection with client whose ID: client_id

@@ -57,7 +57,7 @@ int sendMessage(int dst_socket, Message message)
         return -1;
     };
 
-    return static_cast<int>(message.type);
+    return message.buf_length + sizeof(message.type) + sizeof(message.buf_length);
 }
 
 Message readMessage(int socketFd)
