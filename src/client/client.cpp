@@ -6,10 +6,9 @@
 
 void Client::input_thread()
 {
-    char x;
     while(true)
     {
-        std::cin >> x;
+        std::cin.ignore();
         //pthread_mutex_lock(&input_lock);
         input_lock.lock();
         command = 1;
