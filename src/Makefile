@@ -1,5 +1,5 @@
 CC = g++
-CPPFLAGS = -Wall -Wextra -pedantic -std=c++11
+CPPFLAGS = -Wall -Wextra -pedantic -std=c++11 -pthread
 
 client:	client/headers/client.hpp client/client.cpp runClient.cpp client/headers/message.hpp
 	$(CC) -o runClient client/headers/client.hpp client/client.cpp runClient.cpp client/headers/message.hpp $(CPPFLAGS)

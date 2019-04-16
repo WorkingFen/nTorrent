@@ -4,6 +4,18 @@
 #include <string.h>
 #include <algorithm>
 
+void Client::input_thread()
+{
+    int x;
+    while(std::cin >> x)
+    {
+        //pthread_mutex_lock(&input_lock);
+        input_lock.lock();
+        command = 1;
+        input_lock.unlock();
+        //pthread_mutex_unlock(&input_lock);
+    }
+}
 
 void Client::prepareSockaddrStruct(struct sockaddr_in& x, const char ipAddr[15], const int& port)
 {
@@ -108,6 +120,8 @@ void Client::connectTo(struct sockaddr_in &address)
 
 void Client::run()
 {
+    //pthread_create(&input, 0, input_thread, 0);
+    input = std::thread(&Client::input_thread, this);
     // registerSignalHandler(turnOff);
     do{
         FD_ZERO(&ready);
@@ -160,7 +174,17 @@ void Client::run()
             {
                 ++it;
             }
-        }sendMessage(*clientSockets.begin(), msg::Message(100));
+        }
+        
+        //pthread_mutex_lock(&input_lock);
+        input_lock.lock();
+        if(command > 0)
+        {
+            command = 0;
+            input_lock.unlock();//pthread_mutex_unlock(&input_lock);
+            sendMessage(*clientSockets.begin(), msg::Message(100));
+        }
+        else input_lock.unlock();//pthread_mutex_unlock(&input_lock);
     }while(true);
 }
 void Client::registerSignalHandler(void (*handler)(int))
