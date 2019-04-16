@@ -1,3 +1,4 @@
+#include "../client/headers/message.hpp"
 #include "headers/server.hpp"
 
 server::Server::Server(const char srv_ip[15], const int& srv_port) {
@@ -142,8 +143,10 @@ int server::Server::write_srv(const void* buffer, size_t msg_size) {
 int server::Server::read_srv(char* buffer) {
     memset(buffer, 0, sizeof(buffer));
 
-    int bytes_rcv = recv(*cts_it, buffer, sizeof(buffer), 0);
-    
+    //int bytes_rcv = recv(*cts_it, buffer, sizeof(buffer), 0);
+    msg::Message msg = msg::readMessage(*cts_it);
+    std::cout << "Received: " << static_cast<int>(msg.type) << std::endl;
+/*
     if(bytes_rcv == -1) {
         std::cerr << "There was a connection issue" << std::endl;
         return SRVERROR;
@@ -151,11 +154,11 @@ int server::Server::read_srv(char* buffer) {
     if(bytes_rcv == 0) {
         std::cout << "The client disconnected" << std::endl;
         return SRVNORM;
-    }
+    }*/
 
     // Display message
-    std::cout << "Received: " << std::string(buffer, 0, bytes_rcv) << std::endl;
-    return bytes_rcv;
+    //std::cout << "Received: " << std::string(buffer, 0, bytes_rcv) << std::endl;
+    return msg.buf_length;
 }
 
 // Close connection with client whose ID: client_id

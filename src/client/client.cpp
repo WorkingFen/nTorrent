@@ -83,7 +83,7 @@ void Client::turnOff()
 
 Client::~Client()
 {
-    close(sockFd);
+    turnOff();
     std::cout << "Disconnected" << std::endl;  
 }
 
@@ -103,7 +103,7 @@ void Client::connectTo(struct sockaddr_in &address)
     if(address.sin_addr.s_addr != server.sin_addr.s_addr)
         clientSocketsNum++;
 
-    sendMessage(sock, msg::Message(100));
+    //sendMessage(sock, msg::Message(100));
 }
 
 void Client::run()
@@ -160,10 +160,8 @@ void Client::run()
             {
                 ++it;
             }
-        }
+        }sendMessage(*clientSockets.begin(), msg::Message(100));
     }while(true);
-
-    //turnOff();
 }
 void Client::registerSignalHandler(void (*handler)(int))
 {
