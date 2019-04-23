@@ -155,7 +155,8 @@ void Client::run()
         {
             if(FD_ISSET(*it, &ready))
             {
-                msg::Message msg = msg::readMessage(*it);
+                msg::Message msg;
+                if(msg::readMessage(*it, msg) < 0) std::cerr << "ReadMSg unsuccessful" << std::endl;
                 std::cout << (int) msg.type << std::endl;
                 if(msg.type == msg::Message::Type::disconnect_client)                                // tu msg
                 {

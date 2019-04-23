@@ -60,7 +60,7 @@ int sendMessage(int dst_socket, Message message)
     return message.buf_length + sizeof(message.type) + sizeof(message.buf_length);
 }
 
-Message readMessage(int socketFd)
+int readMessage(int socketFd, Message &message)
 {
     Message msg;
     int bytesRead = 0;
@@ -70,7 +70,7 @@ Message readMessage(int socketFd)
     while(bytesRead < length)
     {
         int readReturn = read(socketFd, buf_msg, length);
-        if(readReturn < 1) return Message(-1);//throw std::runtime_error("Unsuccessful read");
+        if(readReturn < 1) return -1;//throw std::runtime_error("Unsuccessful read");
         bytesRead += readReturn;
     }
 
@@ -82,7 +82,7 @@ Message readMessage(int socketFd)
     while(bytesRead < length)
     {
         int readReturn = read(socketFd, buf_length, length);
-        if(readReturn < 1) return Message(-1);//throw std::runtime_error("Unsuccessful read");
+        if(readReturn < 1) return -1;//throw std::runtime_error("Unsuccessful read");
         bytesRead += readReturn;
     }
 
@@ -94,13 +94,14 @@ Message readMessage(int socketFd)
     while(bytesRead < msg.buf_length)
     {
         int readReturn = read(socketFd, &buffer[0], msg.buf_length);
-        if(readReturn < 1) return Message(-1);//throw std::runtime_error("Unsuccessful read");
+        if(readReturn < 1) return -1;//throw std::runtime_error("Unsuccessful read");
         bytesRead += readReturn;
     }
 
     msg.buffer = buffer;
 
-    return msg;
+    message = msg;
+    return message.buf_length + sizeof(message.type) + sizeof(message.buf_length);
 }
 
 }

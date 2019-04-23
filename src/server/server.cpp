@@ -144,8 +144,14 @@ int server::Server::read_srv(char* buffer) {
     memset(buffer, 0, sizeof(buffer));
 
     //int bytes_rcv = recv(*cts_it, buffer, sizeof(buffer), 0);
-    msg::Message msg = msg::readMessage(*cts_it);
+    msg::Message msg;
+    int bytes_rcv = msg::readMessage(*cts_it, msg);
     std::cout << "Received: " << static_cast<int>(msg.type) << std::endl;
+
+    if(bytes_rcv == -1) {
+        std::cerr << "There was a connection issue" << std::endl;
+        return SRVERROR;
+    }
 /*
     if(bytes_rcv == -1) {
         std::cerr << "There was a connection issue" << std::endl;
