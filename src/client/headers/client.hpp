@@ -12,6 +12,7 @@
 #include <signal.h>
 #include <thread>
 #include <mutex>
+#include "../../signal/headers/sigHandler.hpp"
 
 class Client{
     int sockFd, port, clientSocketsNum, serverSocketsNum, maxFd;        // listen socket; przydzielony port efemeryczny; liczba socketów pobierających/wysyłających dane (nie licząc komunikacji z serwerem)
@@ -23,12 +24,12 @@ class Client{
     std::list<int> serverSockets;                             // lista z socketami pełniącymi role seederów/peerów                        
     enum class State {down, up, connected};                       // stan, w jakim znajduje się użytkownik (determinuje obsługę i/o)
     State state;
-
     std::thread input;
     std::mutex input_lock;// = PTHREAD_MUTEX_INITIALIZER;
     int command = 0;
     void input_thread();  
     //  ?????? InputHandler inputHandler;                              // obsługuje input od użytkownika, może wywoływać np. connect
+    SigHandler signalHandler;                                   // obsługa siginta
 
     /*
         funkcje do obsługi msg

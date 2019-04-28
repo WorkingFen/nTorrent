@@ -27,6 +27,8 @@ void Client::prepareSockaddrStruct(struct sockaddr_in& x, const char ipAddr[15],
 
 Client::Client(const char ipAddr[15], const int& port, const char serverIpAddr[15], const int& serverPort) : clientSocketsNum(0), serverSocketsNum(0), maxFd(0), state(State::down)
 {
+    signalHandler.setupSigIntHandler();
+
     prepareSockaddrStruct(self, ipAddr, port);
     prepareSockaddrStruct(server, serverIpAddr, serverPort);
 
@@ -74,6 +76,10 @@ void Client::turnOff()
 
     for(auto it = clientSockets.begin(); it != clientSockets.end(); ++it){
         int m = msg::sendMessage(*it, message);
+        if(m == -1){
+            std::cerr<<"Sending message to "<<*it<<" socket failed"<<std::endl;
+            // bez continue; bo nie zamkniemy socketa
+        }
         result = close(*it);
         if(result == -1){
             std::cerr<<"Closing "<<*it<<" socket failed"<<std::endl;
@@ -85,6 +91,9 @@ void Client::turnOff()
     for(auto it = serverSockets.begin(); it != serverSockets.end(); ++it){
         int m = msg::sendMessage(*it, message);
         result = close(*it);
+        if(m == -1){
+            std::cerr<<"Sending message to "<<*it<<" socket failed"<<std::endl;
+        }
         if(result == -1){
             std::cerr<<"Closing "<<*it<<" socket failed"<<std::endl;
             continue;
@@ -136,6 +145,7 @@ void Client::run()
         to.tv_sec = 1;
         to.tv_usec = 0;
 
+
         if ( (select(maxFd, &ready, (fd_set *)0, (fd_set *)0, &to)) == -1) {
              throw std::runtime_error ("select call failed");
         }
@@ -186,16 +196,10 @@ void Client::run()
             sendMessage(*clientSockets.begin(), msg::Message(100));
         }
         else input_lock.unlock();//pthread_mutex_unlock(&input_lock);
-    }while(true);
+    }while(!signalHandler.getSigIntFlag());
+    std::cout<<"XD"<<std::endl;
 }
-void Client::registerSignalHandler(void (*handler)(int))
-{
-        struct sigaction sigIntHandler;
-        sigIntHandler.sa_handler = handler;
-        sigemptyset(&sigIntHandler.sa_mask);
-        sigIntHandler.sa_flags = 0;
-        sigaction(SIGINT, &sigIntHandler, NULL);
-}
+
 /*
 void Client::handleMessage(int msg, int src_socket)
 {
