@@ -16,7 +16,7 @@ int main()
         Client client1("127.0.0.1", 0, "0.0.0.0");
 
         char ipAddr[15] = "127.4.0.1";
-        int port = 2222;
+        int port = 2200;
 
         struct sockaddr_in x;
         x.sin_family = AF_INET;

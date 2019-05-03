@@ -29,7 +29,18 @@ class Client{
     int command = 0;
     void input_thread();  
     //  ?????? InputHandler inputHandler;                              // obsługuje input od użytkownika, może wywoływać np. connect
-    SigHandler signalHandler;                                   // obsługa siginta
+   
+
+
+    SigHandler signalHandler;                                   // obsługa siginta z signal action, do wywalenia
+
+    void signal_waiter();					// obsługa siginta na fredach
+    
+    std::mutex interrupted_mutex;				// ma synchronizować dostęp do interrupted_flag
+
+    sigset_t signal_set;					// do ustawienia sigmask
+    bool interrupted_flag = false;				// sygnalizuje użycie Ctrl+C
+
 
     /*
         funkcje do obsługi msg
