@@ -8,7 +8,7 @@ void Client::input_thread()
 {
     while(!interrupted_flag)
     {
-								std::cin.ignore();
+		std::cin.ignore();
         //pthread_mutex_lock(&input_lock);
         input_lock.lock();
         command = 1;
@@ -73,7 +73,7 @@ void Client::turnOff()
     int result;
 
     for(auto it = clientSockets.begin(); it != clientSockets.end(); ++it){
-								std::cout<<"Closing client socket ("<<*it<<")"<<std::endl;
+		std::cout<<"Closing client socket ("<<*it<<")"<<std::endl;
         int m = msg::sendMessage(*it, message);
         if(m == -1){
             std::cerr<<"Sending message to "<<*it<<" socket failed"<<std::endl;
@@ -88,7 +88,7 @@ void Client::turnOff()
     }
 
     for(auto it = serverSockets.begin(); it != serverSockets.end(); ++it){
-								std::cout<<"Closing server socket ("<<*it<<")"<<std::endl;
+		std::cout<<"Closing server socket ("<<*it<<")"<<std::endl;
         int m = msg::sendMessage(*it, message);
         result = close(*it);
         if(m == -1){
@@ -129,17 +129,17 @@ void Client::connectTo(struct sockaddr_in &address)
 
 void Client::signal_waiter()
 {
-				int sig_number;
+	int sig_number;
 
     sigwait (&signal_set, &sig_number);
     if (sig_number == SIGINT) 
-				{
-        std::cout<<"Received SIGINT. Exiting..."<<std::endl;
+	{
+        std::cout<<"\rReceived SIGINT. Exiting..."<<std::endl;
         interrupted_mutex.lock();
         interrupted_flag = true;
 
         interrupted_mutex.unlock();
-				}
+	}
 }
 
 void Client::run()
@@ -152,16 +152,14 @@ void Client::run()
     int status = pthread_sigmask (SIG_BLOCK, &signal_set, NULL);
     if (status != 0)
         std::cerr<<"Setting signal mask failed"<<std::endl;
-    //pthread_create(&input, 0, input_thread, 0);
-    input = std::thread(&Client::input_thread, this);
 
-    /*
+     /*
      * Create the sigwait thread.
      */
     std::thread signal_thread(&Client::signal_waiter, this);
 
-
-
+    //pthread_create(&input, 0, input_thread, 0);
+    input = std::thread(&Client::input_thread, this);
 
     // registerSignalHandler(turnOff);
     do{
@@ -230,9 +228,9 @@ void Client::run()
         else input_lock.unlock();//pthread_mutex_unlock(&input_lock);
     }while(!interrupted_flag);
 
-				signal_thread.join();																			// czekaj aż wątek signal_thread skończy działać
+	signal_thread.join();																			// czekaj aż wątek signal_thread skończy działać
 				
-				input.detach();																									// input blokuje się na std::cin 
+	input.detach();																									// input blokuje się na std::cin 
 }
 
 /*
