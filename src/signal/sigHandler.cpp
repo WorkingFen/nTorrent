@@ -25,5 +25,5 @@ void SigHandler::setupSigIntHandler()
     sigIntAction.sa_handler = SigHandler::sigIntHandler;
     sigemptyset(&sigIntAction.sa_mask);
     sigIntAction.sa_flags = 0;
-    int x = sigaction(SIGINT, &sigIntAction, NULL);
+    sigaction(SIGINT, &sigIntAction, NULL);
 }
