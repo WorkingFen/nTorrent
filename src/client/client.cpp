@@ -3,15 +3,19 @@
 #include <stdexcept>
 #include <string.h>
 #include <algorithm>
+#include <string>
 
 void Client::input_thread()
 {
+    std::string input;
     while(!interrupted_flag)
     {
-		std::cin.ignore();
+        console.printMenu(state);
+		std::cin>>input;
+
         //pthread_mutex_lock(&input_lock);
         input_lock.lock();
-        command = 1;
+        command = std::stoi(input);
         input_lock.unlock();
         //pthread_mutex_unlock(&input_lock);
     }
@@ -25,7 +29,7 @@ void Client::prepareSockaddrStruct(struct sockaddr_in& x, const char ipAddr[15],
     x.sin_port = htons(port);
 }
 
-Client::Client(const char ipAddr[15], const int& port, const char serverIpAddr[15], const int& serverPort) : clientSocketsNum(0), serverSocketsNum(0), maxFd(0), state(State::down)
+Client::Client(const char ipAddr[15], const int& port, const char serverIpAddr[15], const int& serverPort) : clientSocketsNum(0), serverSocketsNum(0), maxFd(0), state(State::up)
 {
     prepareSockaddrStruct(self, ipAddr, port);
     prepareSockaddrStruct(server, serverIpAddr, serverPort);
@@ -45,6 +49,7 @@ Client::Client(const char ipAddr[15], const int& port, const char serverIpAddr[1
     if(listen(sockFd, 20) == -1)
         throw std::runtime_error ("listen call failed");
 
+    char fileDir[1000];
     getcwd(fileDir, 1000);
     strcat(fileDir, "/clientFiles");
 
@@ -143,14 +148,16 @@ void Client::run()
 {
     setSigmask();       // Set sigmask for all threads
 
-    std::thread signal_thread(&Client::signal_waiter, this);        // Create the sigwait thread
+    signal_thread = std::thread(&Client::signal_waiter, this);        // Create the sigwait thread
 
     //pthread_create(&input, 0, input_thread, 0);
     input = std::thread(&Client::input_thread, this);
 
+    int input_value;        // wartość przekazywana do inputHandler w consoleInterface
     // registerSignalHandler(turnOff);
     while(!interrupted_flag)
     {
+
         FD_ZERO(&ready);
         FD_SET(sockFd, &ready);
 
@@ -168,7 +175,7 @@ void Client::run()
              throw std::runtime_error ("select call failed");
         }
 
-        std::cout << maxFd << " " << FD_ISSET(sockFd, &ready) << std::endl;
+        //std::cout << maxFd << " " << FD_ISSET(sockFd, &ready) << std::endl;
 
         if (FD_ISSET(sockFd, &ready) && serverSocketsNum<5)
         {
@@ -207,11 +214,18 @@ void Client::run()
         
         //pthread_mutex_lock(&input_lock);
         input_lock.lock();
+
         if(command > 0)
         {
-            command = 0;
-            input_lock.unlock();//pthread_mutex_unlock(&input_lock);
-            sendMessage(*clientSockets.begin(), msg::Message(100));
+            if(command == 1){
+                input_value = command;
+                command = 0;
+                input_lock.unlock();//pthread_mutex_unlock(&input_lock);
+                console.handleInput(state, input_value);
+            } else {
+                sendMessage(*clientSockets.begin(), msg::Message(100));
+
+            }
         }
         else input_lock.unlock();//pthread_mutex_unlock(&input_lock);
     }

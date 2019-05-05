@@ -19,6 +19,8 @@ string hashOnePiece(istream & stream, int pieceLength) {
 
 	string hash = sha256(bytes);
 
+	cout<<"sha256:"<<hash<<endl;
+
 	return hash;
 }
 
@@ -29,8 +31,8 @@ vector<string> hashPieces(string fileName, int pieceLength) {
     *  fileName: ścieżka do pliku
     *  pieceLength: rozmiar fragmentu w bajtach
     *  return: wektor haszy
-    * 
     */
+
 	ifstream is(fileName.c_str(), ios::in | ios::binary | ios::ate);
 	int fileLength = is.tellg();
 	is.seekg(0, is.beg);
