@@ -135,10 +135,7 @@ void Client::signal_waiter()
     if (sig_number == SIGINT) 
 	{
         std::cout<<"\rReceived SIGINT. Exiting..."<<std::endl;
-        interrupted_mutex.lock();
         interrupted_flag = true;
-
-        interrupted_mutex.unlock();
 	}
 }
 

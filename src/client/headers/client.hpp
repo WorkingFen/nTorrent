@@ -12,7 +12,6 @@
 #include <signal.h>
 #include <thread>
 #include <mutex>
-#include "../../signal/headers/sigHandler.hpp"
 
 class Client{
     int sockFd, port, clientSocketsNum, serverSocketsNum, maxFd;        // listen socket; przydzielony port efemeryczny; liczba socketów pobierających/wysyłających dane (nie licząc komunikacji z serwerem)
@@ -32,12 +31,9 @@ class Client{
    
 
 
-    SigHandler signalHandler;                                   // obsługa siginta z signal action, do wywalenia
 
     void signal_waiter();					// obsługa siginta na fredach
     
-    std::mutex interrupted_mutex;				// ma synchronizować dostęp do interrupted_flag
-
     sigset_t signal_set;					// do ustawienia sigmask
     bool interrupted_flag = false;				// sygnalizuje użycie Ctrl+C
 

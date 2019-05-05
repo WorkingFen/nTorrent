@@ -1,8 +1,8 @@
 CC = g++
 CPPFLAGS = -Wall -Wextra -pedantic -std=c++11 -pthread
 
-client:	signal/sigHandler.cpp signal/headers/sigHandler.hpp client/headers/client.hpp client/client.cpp runClient.cpp client/headers/message.hpp
-	$(CC) -o runClient signal/sigHandler.cpp signal/headers/sigHandler.hpp client/headers/client.hpp client/client.cpp runClient.cpp client/headers/message.hpp $(CPPFLAGS)
+client: client/headers/client.hpp client/client.cpp runClient.cpp client/headers/message.hpp
+	$(CC) -o runClient client/headers/client.hpp client/client.cpp runClient.cpp client/headers/message.hpp $(CPPFLAGS)
 	mkdir -p -m 777 $(PWD)/clientFiles
 
 server: server/headers/server.hpp server/server.cpp runServer.cpp client/headers/message.hpp
