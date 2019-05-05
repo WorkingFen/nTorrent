@@ -33,10 +33,9 @@ class Client{
 
 
     void signal_waiter();					// obsługa siginta na fredach
-    
+    void setSigmask();
     sigset_t signal_set;					// do ustawienia sigmask
     bool interrupted_flag = false;				// sygnalizuje użycie Ctrl+C
-
 
     /*
         funkcje do obsługi msg

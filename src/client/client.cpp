@@ -68,43 +68,33 @@ Client::Client(const char ipAddr[15], const int& port, const char serverIpAddr[1
 
 void Client::turnOff()
 {
-    msg::Message message;
-    message.type = msg::Message::Type::disconnect_client;
     int result;
 
     for(auto it = clientSockets.begin(); it != clientSockets.end(); ++it){
 		std::cout<<"Closing client socket ("<<*it<<")"<<std::endl;
-        int m = msg::sendMessage(*it, message);
-        if(m == -1){
-            std::cerr<<"Sending message to "<<*it<<" socket failed"<<std::endl;
-            // bez continue; bo nie zamkniemy socketa
-        }
+
         result = close(*it);
         if(result == -1){
             std::cerr<<"Closing "<<*it<<" socket failed"<<std::endl;
             continue;
         }
-        std::cout<<"Closed "<<*it<<" client socket"<<std::endl;
     }
 
     for(auto it = serverSockets.begin(); it != serverSockets.end(); ++it){
 		std::cout<<"Closing server socket ("<<*it<<")"<<std::endl;
-        int m = msg::sendMessage(*it, message);
+
         result = close(*it);
-        if(m == -1){
-            std::cerr<<"Sending message to "<<*it<<" socket failed"<<std::endl;
-        }
+
         if(result == -1){
             std::cerr<<"Closing "<<*it<<" socket failed"<<std::endl;
             continue;
         }
-        std::cout<<"Closed "<<*it<<" server socket"<<std::endl;
+        std::cout<<"losed "<<*it<<" server socket"<<std::endl;
     }
 }
 
 Client::~Client()
 {
-    turnOff();
     std::cout << "Disconnected" << std::endl;  
 }
 
@@ -139,21 +129,21 @@ void Client::signal_waiter()
 	}
 }
 
-void Client::run()
-{
-    /*
-     * Set sigmask for all threads
-     */
+void Client::setSigmask(){
+
     sigemptyset (&signal_set);
     sigaddset (&signal_set, SIGINT);
     int status = pthread_sigmask (SIG_BLOCK, &signal_set, NULL);
     if (status != 0)
         std::cerr<<"Setting signal mask failed"<<std::endl;
+}
 
-     /*
-     * Create the sigwait thread.
-     */
-    std::thread signal_thread(&Client::signal_waiter, this);
+
+void Client::run()
+{
+    setSigmask();       // Set sigmask for all threads
+
+    std::thread signal_thread(&Client::signal_waiter, this);        // Create the sigwait thread
 
     //pthread_create(&input, 0, input_thread, 0);
     input = std::thread(&Client::input_thread, this);
@@ -225,9 +215,9 @@ void Client::run()
         else input_lock.unlock();//pthread_mutex_unlock(&input_lock);
     }while(!interrupted_flag);
 
-	signal_thread.join();																			// czekaj aż wątek signal_thread skończy działać
-				
+	signal_thread.join();																			// czekaj aż wątek signal_thread skończy działać				
 	input.detach();																									// input blokuje się na std::cin 
+    turnOff();
 }
 
 /*
