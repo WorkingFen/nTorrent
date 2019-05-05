@@ -149,7 +149,8 @@ void Client::run()
     input = std::thread(&Client::input_thread, this);
 
     // registerSignalHandler(turnOff);
-    do{
+    while(!interrupted_flag)
+    {
         FD_ZERO(&ready);
         FD_SET(sockFd, &ready);
 
@@ -213,7 +214,7 @@ void Client::run()
             sendMessage(*clientSockets.begin(), msg::Message(100));
         }
         else input_lock.unlock();//pthread_mutex_unlock(&input_lock);
-    }while(!interrupted_flag);
+    }
 
 	signal_thread.join();																			// czekaj aż wątek signal_thread skończy działać				
 	input.detach();																									// input blokuje się na std::cin 
