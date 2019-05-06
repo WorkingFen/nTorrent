@@ -6,7 +6,7 @@ using std::string;
 using std::vector;
 
 
-ConsoleInterface::ConsoleInterface()
+ConsoleInterface::ConsoleInterface(Client& c): client(c), state(State::up)
 {
     getcwd(fileDirName, 1000);
     strcat(fileDirName, "/clientFiles");
@@ -21,7 +21,7 @@ ConsoleInterface::~ConsoleInterface()
     closedir(fileDir);
 }
 
-void ConsoleInterface::printMenu(State state)
+void ConsoleInterface::printMenu()
 {
     cout<<"Menu:"<<endl;
     switch(state){
@@ -63,14 +63,22 @@ void ConsoleInterface::printMenu(State state)
 
 }
 
-void ConsoleInterface::handleInput(State state, int input){
-    std::system("clear");
+void ConsoleInterface::handleInput(int input){
+    //std::system("clear");
     switch(state){
         case State::up:
-            if(input == 1){calculateHashes();};
+            if(input == 1)
+            {
+                calculateHashes();
+                client.connectTo(client.getServer());
+                state = State::connected;
+            }
             break;
         case State::connected:
-            //TODO
+            if(input == 1)
+            {
+                printFolderContent();
+            }
             break;
         case State::seeding:
             //TODO
@@ -92,20 +100,21 @@ void ConsoleInterface::printFolderContent()
     struct dirent *x;
     while( (x=readdir(fileDir)) != NULL )
     {
-        if(!strcmp(x->d_name, ".") && !strcmp(x->d_name, ".."))
+        if(strcmp(x->d_name, ".")!=0 && strcmp(x->d_name, "..")!=0)
             cout << x->d_name << endl;
     }
 }
-
 
 vector<string> ConsoleInterface::getDirFiles(){
     struct dirent *x;
     vector<string> fileNames;
     while( (x=readdir(fileDir)) != NULL )
     {
-        if(!strcmp(x->d_name, ".") && !strcmp(x->d_name, ".."))
+        if(strcmp(x->d_name, ".")!=0 && strcmp(x->d_name, "..")!=0)
+        {
             cout << "FILENAME="<<x->d_name << endl;
             fileNames.push_back(x->d_name);
+        }
     }
 
     return fileNames;
@@ -118,7 +127,7 @@ void ConsoleInterface::calculateHashes(){
     cout<<fileDirName<<endl;
     for(auto it = fileNames.begin(); it != fileNames.end(); ++it){
 
-        std::cout<<fileDirName<<":"<<*it<<endl;
+        cout<<fileDirName<<":"<<*it<<endl;
         path = fileDirName + *it;
 
         hashes.push_back(hashPieces(path, 10));

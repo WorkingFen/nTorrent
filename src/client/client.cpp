@@ -8,11 +8,10 @@
 void Client::input_thread()
 {
     std::string input;
+    console->printMenu();
     while(!interrupted_flag)
     {
-        console.printMenu(state);
-		std::cin>>input;
-
+        std::cin>>input;
         //pthread_mutex_lock(&input_lock);
         input_lock.lock();
         command = std::stoi(input);
@@ -29,7 +28,7 @@ void Client::prepareSockaddrStruct(struct sockaddr_in& x, const char ipAddr[15],
     x.sin_port = htons(port);
 }
 
-Client::Client(const char ipAddr[15], const int& port, const char serverIpAddr[15], const int& serverPort) : clientSocketsNum(0), serverSocketsNum(0), maxFd(0), state(State::up)
+Client::Client(const char ipAddr[15], const int& port, const char serverIpAddr[15], const int& serverPort) : clientSocketsNum(0), serverSocketsNum(0), maxFd(0)
 {
     prepareSockaddrStruct(self, ipAddr, port);
     prepareSockaddrStruct(server, serverIpAddr, serverPort);
@@ -66,8 +65,6 @@ Client::Client(const char ipAddr[15], const int& port, const char serverIpAddr[1
         this->port=port;
     }
     
-    state = State::up;
-
     std::cout << "Successfully connected and listening at: " << ipAddr << ":" << this->port << std::endl;
 }
 
@@ -103,7 +100,7 @@ Client::~Client()
     std::cout << "Disconnected" << std::endl;  
 }
 
-void Client::connectTo(struct sockaddr_in &address)
+void Client::connectTo(const struct sockaddr_in &address)
 {
     int sock = socket(AF_INET, SOCK_STREAM, 0);
     
@@ -221,7 +218,8 @@ void Client::run()
                 input_value = command;
                 command = 0;
                 input_lock.unlock();//pthread_mutex_unlock(&input_lock);
-                console.handleInput(state, input_value);
+                console->handleInput(input_value);
+                console->printMenu();
             } else {
                 sendMessage(*clientSockets.begin(), msg::Message(100));
 
@@ -233,6 +231,16 @@ void Client::run()
 	signal_thread.join();																			// czekaj aż wątek signal_thread skończy działać				
 	input.detach();																									// input blokuje się na std::cin 
     turnOff();
+}
+
+const struct sockaddr_in& Client::getServer() const
+{
+    return server;
+}
+
+void Client::setConsoleInterface(ConsoleInterfacePtr& x)
+{
+    console = std::move(x);
 }
 
 /*

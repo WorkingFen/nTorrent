@@ -1,12 +1,12 @@
 #ifndef CONSOLEINTERFACE_HPP
 #define CONSOLEINTERFACE_HPP
 
+#include "client.hpp"
 #include <iostream>
 #include <dirent.h>
 #include <unistd.h>
 #include <string.h>
 #include <vector>
-
 
 enum class State      // stan, w jakim znajduje się użytkownik (determinuje obsługę i/o)
 {
@@ -17,23 +17,26 @@ enum class State      // stan, w jakim znajduje się użytkownik (determinuje ob
     both              // jednocześnie udostępnia i pobiera
 };
 
+class Client;
 
 class ConsoleInterface
 {
+    Client& client;
     char fileDirName[1000];
     DIR *fileDir;
+    State state;
 
     void printFolderContent();
 
     public:
-    ConsoleInterface();
+    ConsoleInterface(Client& c);
     ~ConsoleInterface();
 
     void setDir();
     std::vector<std::string> getDirFiles();
     void calculateHashes();
-    void printMenu(State state);
-    void handleInput(State state, int input);
+    void printMenu();
+    void handleInput(int input);
 };
 
 #endif

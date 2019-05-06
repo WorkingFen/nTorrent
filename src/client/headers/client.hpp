@@ -11,8 +11,12 @@
 #include <signal.h>
 #include <thread>
 #include <mutex>
+#include <memory>
 #include "consoleInterface.hpp"
 
+class ConsoleInterface;
+
+typedef std::unique_ptr<ConsoleInterface> ConsoleInterfacePtr;
 
 class Client{
     int sockFd, port, clientSocketsNum, serverSocketsNum, maxFd;        // listen socket; przydzielony port efemeryczny; liczba socketów pobierających/wysyłających dane (nie licząc komunikacji z serwerem)
@@ -21,17 +25,12 @@ class Client{
 	struct timeval to;
 	std::list<int> clientSockets;                             // lista z socketami pełniącymi role leechów/peerów
     std::list<int> serverSockets;                             // lista z socketami pełniącymi role seederów/peerów                        
-    State state;
     std::thread input;
     std::mutex input_lock;// = PTHREAD_MUTEX_INITIALIZER;
     int command = 0;
     void input_thread();
-    ConsoleInterface console; 
-    //  ?????? InputHandler inputHandler;                              // obsługuje input od użytkownika, może wywoływać np. connect
+    ConsoleInterfacePtr console; 
    
-
-
-
     void signal_waiter();					// obsługa siginta na fredach
     void setSigmask();
     std::thread signal_thread;              
@@ -46,14 +45,14 @@ class Client{
     public:
     Client(const char ipAddr[15], const int& port, const char serverIpAddr[15], const int& serverPort=2200);         // tworzy socketa, który będzie nasłuchiwał
     ~Client();
-    void connectTo(struct sockaddr_in &server);             // łączy się z klientem o podanym adresie (serwer powinien przesyłać gotową strukturę do klienta) lub z serwerem torrent
+    void connectTo(const struct sockaddr_in &server);             // łączy się z klientem o podanym adresie (serwer powinien przesyłać gotową strukturę do klienta) lub z serwerem torrent
     void turnOff();                                         // metoda kończąca wszystkie połączenia
     void run();                                             // pętla z selectem
-
     //void handleMessage(Message msg);
     //void disconnectFrom(int socket);
-
     void registerSignalHandler(void (*handler)(int));
+    const struct sockaddr_in& getServer() const;
+    void setConsoleInterface(ConsoleInterfacePtr& x);
 };
 
 #endif

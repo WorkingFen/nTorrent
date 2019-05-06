@@ -13,8 +13,13 @@ int main()
     // signal(SIGINT, sighand);
 
     try{
-        Client client1("127.0.0.1", 0, "0.0.0.0");
-
+        Client client("127.0.0.1", 0, "127.4.0.1", 2200);
+        std::unique_ptr<ConsoleInterface> console(new ConsoleInterface(client));
+        client.setConsoleInterface(console);
+        client.run();
+    }
+    catch(std::exception& e) { std::cerr << e.what() << std::endl;}
+        /*
         char ipAddr[15] = "127.4.0.1";
         int port = 2200;
 
@@ -26,7 +31,7 @@ int main()
 
         client1.connectTo(x);
         client1.run();
-        /*
+        
         Client client2("127.1.0.1", 0, "0.0.0.0");
         Client client3("127.2.0.1", 0, "0.0.0.0");
         struct sockaddr_in x;
@@ -36,8 +41,5 @@ int main()
         client2.connectTo(x);
         client3.connectTo(x);
         client1.run();*/
-    }
-    catch(std::exception& e) { std::cerr << e.what() << std::endl;}
-
     return 0;
 }
