@@ -12,7 +12,7 @@ Brak
 
 ## Technologie
 Technologie, które wykorzystujemy/będziemy wykorzystywać:
-???
+- [JsonCpp](https://github.com/open-source-parsers/jsoncpp) - Przydatny i opensource'owy parser do plików .json
 
 ## Autorzy
 - **Bochenek Mateusz** - [mbochene](https://github.com/mbochene)

@@ -13,6 +13,7 @@
 #include <stdexcept>
 #include <thread>
 #include <signal.h>
+#include <../json/json.h>
 
 // #include <netinet/in.h>
 
