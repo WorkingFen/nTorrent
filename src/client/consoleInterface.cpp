@@ -23,41 +23,47 @@ ConsoleInterface::~ConsoleInterface()
 
 void ConsoleInterface::printMenu()
 {
-    cout<<"Menu:"<<endl;
     switch(state){
         case State::up:
-            cout<<"Aktualny stan: niepołączony"<<endl
+            cout<<"Menu:"<<endl
+                <<"Aktualny stan: niepołączony"<<endl
                 <<"1. Połącz z serwerem"<<endl
                 <<"9. Zakończ program"<<endl;
             break;
         case State::connected:
-            cout<<"Aktualny stan: połączony"<<endl
+            cout<<"Menu:"<<endl
+                <<"Aktualny stan: połączony"<<endl
                 <<"1. Wyświetl zawartość katalogu"<<endl
                 <<"2. Pobierz plik"<<endl
                 <<"3. Uaktualnij stan plików"<<endl
                 <<"9. Zakończ program"<<endl;
             break;
         case State::seeding:
-            cout<<"Aktualny stan: udostępnianie"<<endl
+            cout<<"Menu:"<<endl
+                <<"Aktualny stan: udostępnianie"<<endl
                 <<"1. Przestań udostępniać"<<endl
                 <<"2. Zakończ program"<<endl
                 <<"3. Zakończ program"<<endl
                 <<"4. Zakończ program"<<endl;
             break;
         case State::leeching:
-            cout<<"Aktualny stan: pobieranie"<<endl
+            cout<<"Menu:"<<endl
+                <<"Aktualny stan: pobieranie"<<endl
                 <<"1. Połącz z serwerem"<<endl
                 <<"2. Zakończ program"<<endl;
             break;
         case State::both:
-            cout<<"Aktualny stan: udostępnianie/pobieranie"<<endl
+            cout<<"Menu:"<<endl
+                <<"Aktualny stan: udostępnianie/pobieranie"<<endl
                 <<"1. Połącz z serwerem"<<endl
                 <<"2. Zakończ program"<<endl;
             break;
+        case State::down:
+            return;
 
         default:
-            cout<<"Error"<<endl;
-            break;
+            cout<<"Menu error"<<endl;
+            return;
     }
     cout<<"Wprowadź numer opcji: ";
 
@@ -67,32 +73,115 @@ void ConsoleInterface::handleInput(int input){
     //std::system("clear");
     switch(state){
         case State::up:
-            if(input == 1)
-            {
+            handleInputUp(input);
+            break;
+        case State::connected:
+            handleInputConnected(input);
+            break;
+        case State::seeding:
+            handleInputSeeding(input);
+            break;
+        case State::leeching:
+            handleInputLeeching(input);
+            break;
+        case State::both:
+            handleInputBoth(input);
+            break;
+        default:
+            //TODO - przy State::down chyba nie powinno się nic dziać, pętla zakończy działanie po dokończeniu obiegu
+            break;
+    }
+}
+
+void ConsoleInterface::handleInputUp(int input){
+    switch(input){
+        case 1:
                 calculateHashes();
                 client.connectTo(client.getServer());
                 state = State::connected;
-            }
-            break;
-        case State::connected:
-            if(input == 1)
-            {
-                printFolderContent();
-            }
-            break;
-        case State::seeding:
-            //TODO
-            break;
-        case State::leeching:
-            //TODO
-            break;
-        case State::both:
-            //TODO
-            break;
+                break;
+                
+        case 9:
+                state = State::down;
+                break;
+
         default:
-            //TODO
-            break;
+                //TODO
+                break;
+
     }
+}
+
+void ConsoleInterface::handleInputConnected(int input){
+    switch(input){
+        case 1:
+                printFolderContent();
+                break;
+                
+        case 9:
+                state = State::down;
+                break;
+
+        default:
+                //TODO
+                break;
+
+    }
+}
+
+void ConsoleInterface::handleInputSeeding(int input){
+    switch(input){
+        case 1:
+                printFolderContent();
+                break;
+                
+        case 9:
+                state = State::down;
+                break;
+
+        default:
+                //TODO
+                break;
+
+    }
+}
+
+void ConsoleInterface::handleInputLeeching(int input){
+    switch(input){
+        case 1:
+                printFolderContent();
+                break;
+                
+        case 9:
+                state = State::down;
+                break;
+
+        default:
+                //TODO
+                break;
+
+    }
+}
+
+void ConsoleInterface::handleInputBoth(int input){
+    switch(input){
+        case 1:
+                printFolderContent();
+                break;
+                
+        case 9:
+                state = State::down;
+                break;
+
+        default:
+                //TODO
+                break;
+
+    }
+}
+
+State ConsoleInterface::getState(){
+    return state;
 }
 
 void ConsoleInterface::printFolderContent()

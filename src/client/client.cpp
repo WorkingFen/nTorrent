@@ -9,7 +9,7 @@ void Client::input_thread()
 {
     std::string input;
     std::unique_lock<std::mutex> lock(inputLock);
-    while(!interrupted_flag)
+    while(!interrupted_flag && console->getState() != State::down)
     {
         condition.wait(lock);
         console->printMenu();
@@ -145,6 +145,7 @@ void Client::setSigmask(){
 
 void Client::run()
 {
+
     setSigmask();       // Set sigmask for all threads
 
     signal_thread = std::thread(&Client::signal_waiter, this);        // Create the sigwait thread
@@ -156,7 +157,7 @@ void Client::run()
 
     int input_value;        // wartość przekazywana do inputHandler w consoleInterface
     // registerSignalHandler(turnOff);
-    while(!interrupted_flag)
+    while(!interrupted_flag && console->getState() != State::down)
     {
 
         FD_ZERO(&ready);
@@ -166,7 +167,7 @@ void Client::run()
             FD_SET(i, &ready);
 
         for(const int &i : serverSockets)
-            FD_SET(i, &ready);
+            FD_SET(i, &ready); 
 
         to.tv_sec = 1;
         to.tv_usec = 0;
@@ -218,8 +219,7 @@ void Client::run()
 
         if(command > 0)
         {
-            if(command == 1)
-            {
+            if(command > 0 && command <= 9){
                 input_value = command;
                 command = 0;
                 console->handleInput(input_value);
@@ -233,8 +233,7 @@ void Client::run()
 
         commandLock.unlock();//pthread_mutex_unlock(&input_lock);
     }
-
-	signal_thread.join();																			// czekaj aż wątek signal_thread skończy działać				
+	signal_thread.detach();																			// czekaj aż wątek signal_thread skończy działać				
 	input.detach();																									// input blokuje się na std::cin 
     turnOff();
 }

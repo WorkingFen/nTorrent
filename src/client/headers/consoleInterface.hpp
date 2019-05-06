@@ -14,7 +14,8 @@ enum class State      // stan, w jakim znajduje się użytkownik (determinuje ob
     connected,        // połączony z serwerem, nic nie udostępnia ani nie pobiera
     seeding,          // udostępnia plik(i), nic nie pobiera
     leeching,         // pobiera plik(i), nic nie udostępnia
-    both              // jednocześnie udostępnia i pobiera
+    both,             // jednocześnie udostępnia i pobiera
+    down              // użytkownik wybrał opcję zakończenia program
 };
 
 class Client;
@@ -37,6 +38,12 @@ class ConsoleInterface
     void calculateHashes();
     void printMenu();
     void handleInput(int input);
+    void handleInputUp(int input);
+    void handleInputConnected(int connected);
+    void handleInputSeeding(int input);
+    void handleInputLeeching(int input);
+    void handleInputBoth(int input);
+    State getState();
 };
 
 #endif
