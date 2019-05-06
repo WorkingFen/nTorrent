@@ -11,6 +11,7 @@
 #include <signal.h>
 #include <thread>
 #include <mutex>
+#include <condition_variable>
 #include <memory>
 #include "consoleInterface.hpp"
 
@@ -26,7 +27,8 @@ class Client{
 	std::list<int> clientSockets;                             // lista z socketami pełniącymi role leechów/peerów
     std::list<int> serverSockets;                             // lista z socketami pełniącymi role seederów/peerów                        
     std::thread input;
-    std::mutex input_lock;// = PTHREAD_MUTEX_INITIALIZER;
+    std::mutex commandLock, inputLock;// = PTHREAD_MUTEX_INITIALIZER;
+    std::condition_variable condition;
     int command = 0;
     void input_thread();
     ConsoleInterfacePtr console; 

@@ -8,14 +8,16 @@
 void Client::input_thread()
 {
     std::string input;
-    console->printMenu();
+    std::unique_lock<std::mutex> lock(inputLock);
     while(!interrupted_flag)
     {
+        condition.wait(lock);
+        console->printMenu();
         std::cin>>input;
         //pthread_mutex_lock(&input_lock);
-        input_lock.lock();
+        commandLock.lock();
         command = std::stoi(input);
-        input_lock.unlock();
+        commandLock.unlock();
         //pthread_mutex_unlock(&input_lock);
     }
 }
@@ -149,6 +151,8 @@ void Client::run()
 
     //pthread_create(&input, 0, input_thread, 0);
     input = std::thread(&Client::input_thread, this);
+    sleep(1);
+    condition.notify_one();
 
     int input_value;        // wartość przekazywana do inputHandler w consoleInterface
     // registerSignalHandler(turnOff);
@@ -210,22 +214,24 @@ void Client::run()
         }
         
         //pthread_mutex_lock(&input_lock);
-        input_lock.lock();
+        commandLock.lock();
 
         if(command > 0)
         {
-            if(command == 1){
+            if(command == 1)
+            {
                 input_value = command;
                 command = 0;
-                input_lock.unlock();//pthread_mutex_unlock(&input_lock);
                 console->handleInput(input_value);
-                console->printMenu();
-            } else {
+                condition.notify_one();
+            } else 
+            {
+                command = 0;
                 sendMessage(*clientSockets.begin(), msg::Message(100));
-
             }
         }
-        else input_lock.unlock();//pthread_mutex_unlock(&input_lock);
+
+        commandLock.unlock();//pthread_mutex_unlock(&input_lock);
     }
 
 	signal_thread.join();																			// czekaj aż wątek signal_thread skończy działać				
