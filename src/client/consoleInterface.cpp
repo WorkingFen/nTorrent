@@ -187,11 +187,18 @@ State ConsoleInterface::getState(){
 void ConsoleInterface::printFolderContent()
 {
     struct dirent *x;
+    int i=1;
+    cout << endl << "ZAWARTOSC KATALOGU:" << endl; 
     while( (x=readdir(fileDir)) != NULL )
     {
         if(strcmp(x->d_name, ".")!=0 && strcmp(x->d_name, "..")!=0)
-            cout << x->d_name << endl;
+        {
+            cout << i << ". " << x->d_name << endl;
+            i++;
+        }
     }
+    cout << endl;
+    rewinddir(fileDir);
 }
 
 vector<string> ConsoleInterface::getDirFiles(){
@@ -205,7 +212,7 @@ vector<string> ConsoleInterface::getDirFiles(){
             fileNames.push_back(x->d_name);
         }
     }
-
+    rewinddir(fileDir);
     return fileNames;
 }
 
