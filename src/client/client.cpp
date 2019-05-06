@@ -220,10 +220,14 @@ void Client::run()
         if(command > 0)
         {
             if(command > 0 && command <= 9){
-                input_value = command;
-                command = 0;
-                console->handleInput(input_value);
-                condition.notify_one();
+                try{
+                    input_value = command;
+                    command = 0;
+                    console->handleInput(input_value);
+                    if(console->getState() != State::down)                  // aby nie zezwolić wątkowi na próbę wypisania menu
+                        condition.notify_one();
+                }
+                catch(std::exception& e) { std::cerr << e.what() << std::endl; break;}
             } else 
             {
                 command = 0;

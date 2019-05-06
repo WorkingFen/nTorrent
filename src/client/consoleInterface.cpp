@@ -96,8 +96,8 @@ void ConsoleInterface::handleInput(int input){
 void ConsoleInterface::handleInputUp(int input){
     switch(input){
         case 1:
-                calculateHashes();
                 client.connectTo(client.getServer());
+                calculateHashes();
                 state = State::connected;
                 break;
                 
