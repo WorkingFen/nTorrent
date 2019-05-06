@@ -11,6 +11,8 @@
 #include <string>
 #include <list>
 #include <stdexcept>
+#include <thread>
+#include <signal.h>
 
 // #include <netinet/in.h>
 
@@ -18,7 +20,7 @@
 #define SRVNORM 0
 #define SRVERROR -1
 
-#define _DEBUG
+#define LOGS
 
 #ifdef _DEBUG
     #define SOCKNAME
@@ -26,6 +28,9 @@
 #endif
 
 #ifdef LOGS
+    #ifndef SOCKNAME
+        #define SOCKNAME
+    #endif
     #ifndef CTNAME
         #define CTNAME
     #endif
@@ -49,6 +54,12 @@ namespace server {
             char host[NI_MAXHOST];
             char svc[NI_MAXSERV];
 #endif
+            std::thread signal_thread;  // Thread for signal handling
+            sigset_t signal_set;        // Signal which should be used for set_SIGmask
+            bool sigint_flag;           // Signal of ctrl+C usage
+            void signal_waiter(); 
+            void set_SIGmask();
+            void shutdown();
 
         public:
             Server(const char srv_ip[15], const int& srv_port);

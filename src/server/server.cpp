@@ -1,17 +1,57 @@
 #include "../client/headers/message.hpp"
 #include "headers/server.hpp"
 
-server::Server::Server(const char srv_ip[15], const int& srv_port) {
+// Wait for SIGINT to occur
+void server::Server::signal_waiter() {
+    int sig;
+
+    sigwait(&signal_set, &sig);
+    if(sig == SIGINT) {
+        std::cout << "\rReceived SIGINT. Exiting..." << std::endl;
+        sigint_flag = true;
+    }
+}
+
+// Set signal_set to SIGINT
+void server::Server::set_SIGmask() {
+    sigemptyset(&signal_set);
+    sigaddset(&signal_set, SIGINT);
+    int status = pthread_sigmask(SIG_BLOCK, &signal_set, NULL);
+    if(status != 0)
+        throw std::runtime_error("Setting signal mask failed");
+        //std::cerr << "Setting signal mask failed" << std::endl;
+}
+
+// Close all connections
+void server::Server::shutdown() {
+#ifdef CTNAME
+    memset(host, 0, NI_MAXHOST);
+    memset(svc, 0, NI_MAXSERV);
+#endif
+    memset(msg_buf, 0, sizeof(msg_buf));
+    while(clients_sockets.size() != 0) {
+        cts_it = clients_sockets.begin();
+        close_ct();
+    }
+    close(listener);
+}
+
+server::Server::Server(const char srv_ip[15], const int& srv_port) : sigint_flag(false) {
+    set_SIGmask();
+    signal_thread = std::thread(&Server::signal_waiter, this);
+
     timeout.tv_sec = 1;
     timeout.tv_usec = 0;
     socket_srv();
     bind_srv(srv_ip, srv_port);
     listen_srv();
-    while(true){
+    while(!sigint_flag){
         select_cts();
         accept_srv();
         check_cts();
     }
+    signal_thread.detach();
+    shutdown();
 }
 
 // Create listener socket
@@ -48,9 +88,9 @@ void server::Server::bind_srv(const char srv_ip[15], const int& srv_port) {
         //std::cerr << "Can't get socket name";
         //return SRVERROR;
     }
-    std::cout << "Socket port #" << ntohs(server.sin_port) << std::endl;
+    std::cout << "Successfully connected and listening at: " << srv_ip << ":" << ntohs(server.sin_port) << std::endl;
 #endif
-
+    
     //return SRVNORM;
 }
 
@@ -146,24 +186,26 @@ int server::Server::read_srv(char* buffer) {
     //int bytes_rcv = recv(*cts_it, buffer, sizeof(buffer), 0);
     msg::Message msg;
     int bytes_rcv = msg::readMessage(*cts_it, msg);
-    std::cout << "Received: " << static_cast<int>(msg.type) << std::endl;
 
     if(bytes_rcv == -1) {
         std::cerr << "There was a connection issue" << std::endl;
         return SRVERROR;
     }
-/*
-    if(bytes_rcv == -1) {
-        std::cerr << "There was a connection issue" << std::endl;
-        return SRVERROR;
+    else{
+        std::cout << "Received: " << static_cast<int>(msg.type) << std::endl;
     }
-    if(bytes_rcv == 0) {
-        std::cout << "The client disconnected" << std::endl;
-        return SRVNORM;
-    }*/
+
+    // if(bytes_rcv == -1) {
+    //     std::cerr << "There was a connection issue" << std::endl;
+    //     return SRVERROR;
+    // }
+    // if(bytes_rcv == 0) {
+    //     std::cout << "The client disconnected" << std::endl;
+    //     return SRVNORM;
+    // }
 
     // Display message
-    //std::cout << "Received: " << std::string(buffer, 0, bytes_rcv) << std::endl;
+    // std::cout << "Received: " << std::string(buffer, 0, bytes_rcv) << std::endl;
     return msg.buf_length + 8;
 }
 
@@ -178,15 +220,5 @@ void server::Server::close_ct() {
 }
 
 server::Server::~Server() {
-#ifdef CTNAME
-    memset(host, 0, NI_MAXHOST);
-    memset(svc, 0, NI_MAXSERV);
-#endif
-    memset(msg_buf, 0, sizeof(msg_buf));
-    while(clients_sockets.size() != 0) {
-        cts_it = clients_sockets.begin();
-        close_ct();
-    }
-    close(listener);
     std::cout << "Disconnected" << std::endl;
 }
