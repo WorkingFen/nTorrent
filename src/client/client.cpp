@@ -1,5 +1,4 @@
 #include "headers/client.hpp"
-#include "headers/message.hpp"
 #include <stdexcept>
 #include <string.h>
 #include <algorithm>
@@ -10,16 +9,32 @@ void Client::input_thread()
     std::string input;
     std::unique_lock<std::mutex> lock(inputLock);
     while(!interrupted_flag && console->getState() != State::down)
-    {
+    {std::cout << "Wait" << std::endl;
         condition.wait(lock);
-        console->printMenu();
+    std::cout << "Wit not" << std::endl;
+        if(console != nullptr)
+
+            {std::cout << "Not nullptr" << std::endl;
+                console->printMenu();}
+        else
+            {std::cout << "Else" << std::endl;
+                break;}
+        
         std::cin>>input;
         //pthread_mutex_lock(&input_lock);
         commandLock.lock();
-        command = std::stoi(input);
+        try
+        {
+            command = std::stoi(input);
+        }
+        catch(std::invalid_argument e)
+        {
+            command = 100;
+        }
         commandLock.unlock();
         //pthread_mutex_unlock(&input_lock);
     }
+    std::cout << "input end" << std::endl;
 }
 
 void Client::prepareSockaddrStruct(struct sockaddr_in& x, const char ipAddr[15], const int& port)
@@ -190,10 +205,10 @@ void Client::run()
 
         for(auto it=serverSockets.begin(); it!=serverSockets.end();)                // pętla dla serverSockets -> TODO pętla dla cilentSockets
         {
-            if(FD_ISSET(*it, &ready))
+            if(FD_ISSET(*it, &ready) && msg_manager.assembleMsg(*it))
             {
-                msg::Message msg;
-                if(msg::readMessage(*it, msg) < 0) std::cerr << "ReadMSg unsuccessful" << std::endl;
+                msg::Message msg = msg_manager.readMsg(*it);
+
                 std::cout << (int) msg.type << std::endl;
                 if(msg.type == msg::Message::Type::disconnect_client)                                // tu msg
                 {
@@ -231,14 +246,16 @@ void Client::run()
             } else 
             {
                 command = 0;
-                sendMessage(*clientSockets.begin(), msg::Message(100));
+                msg::Message(100).sendMessage(*clientSockets.begin());
+                condition.notify_one();
             }
         }
 
         commandLock.unlock();//pthread_mutex_unlock(&input_lock);
     }
 	signal_thread.detach();																			// czekaj aż wątek signal_thread skończy działać				
-	input.detach();																									// input blokuje się na std::cin 
+    input.detach();																								// input blokuje się na std::cin 
+    //input.join();
     turnOff();
 }
 

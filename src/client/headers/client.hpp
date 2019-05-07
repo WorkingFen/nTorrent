@@ -14,6 +14,7 @@
 #include <condition_variable>
 #include <memory>
 #include "consoleInterface.hpp"
+#include "../../message/message.hpp"
 
 class ConsoleInterface;
 
@@ -31,7 +32,8 @@ class Client{
     std::condition_variable condition;
     int command = 0;
     void input_thread();
-    ConsoleInterfacePtr console; 
+    msg::MessageManager msg_manager;
+    ConsoleInterfacePtr console;
    
     void signal_waiter();					// obsługa siginta na fredach
     void setSigmask();

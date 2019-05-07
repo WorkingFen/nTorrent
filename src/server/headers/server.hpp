@@ -13,7 +13,8 @@
 #include <stdexcept>
 #include <thread>
 #include <signal.h>
-#include <../json/json.h>
+#include "../../message/message.hpp"
+#include "../json/json.h"
 
 // #include <netinet/in.h>
 
@@ -55,6 +56,7 @@ namespace server {
             char host[NI_MAXHOST];
             char svc[NI_MAXSERV];
 #endif
+            msg::MessageManager msg_manager;
             std::thread signal_thread;  // Thread for signal handling
             sigset_t signal_set;        // Signal which should be used for set_SIGmask
             bool sigint_flag;           // Signal of ctrl+C usage
