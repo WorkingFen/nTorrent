@@ -177,7 +177,6 @@ vector<string> ConsoleInterface::getDirFiles(){
     {
         if(strcmp(x->d_name, ".")!=0 && strcmp(x->d_name, "..")!=0)
         {
-            cout << "FILENAME="<<x->d_name << endl;
             fileNames.push_back(x->d_name);
         }
     }
@@ -189,7 +188,6 @@ void ConsoleInterface::calculateHashes(){
     vector<string> fileNames = getDirFiles();
     vector<vector<string>> hashes;
     string path;
-    cout<<fileDirName<<endl;
     for(auto it = fileNames.begin(); it != fileNames.end(); ++it){
 
         cout<<fileDirName<<":"<<*it<<endl;

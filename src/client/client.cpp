@@ -1,5 +1,4 @@
 #include "headers/client.hpp"
-#include "headers/message.hpp"
 #include <stdexcept>
 #include <string.h>
 #include <algorithm>
@@ -26,13 +25,13 @@ void Client::input_thread()
         //pthread_mutex_lock(&input_lock);
         commandLock.lock();
 
-        // TODO inne ify,   try 
         try{
             command = std::stoi(input);
         } catch(std::exception& e) { command=-1;}       // -1 dla inputHandler
         commandLock.unlock();
         //pthread_mutex_unlock(&input_lock);
     }
+    std::cout << "input end" << std::endl;
 }
 
 void Client::prepareSockaddrStruct(struct sockaddr_in& x, const char ipAddr[15], const int& port)
@@ -203,10 +202,10 @@ void Client::run()
 
         for(auto it=serverSockets.begin(); it!=serverSockets.end();)                // pętla dla serverSockets -> TODO pętla dla cilentSockets
         {
-            if(FD_ISSET(*it, &ready))
+            if(FD_ISSET(*it, &ready) && msg_manager.assembleMsg(*it))
             {
-                msg::Message msg;
-                if(msg::readMessage(*it, msg) < 0) std::cerr << "ReadMSg unsuccessful" << std::endl;
+                msg::Message msg = msg_manager.readMsg(*it);
+
                 std::cout << (int) msg.type << std::endl;
                 if(msg.type == msg::Message::Type::disconnect_client)                                // tu msg
                 {
@@ -250,10 +249,8 @@ void Client::run()
     }
 	pthread_cancel(signal_thread.native_handle());
     signal_thread.join();
-    std::cout<<"XD"<<std::endl;
     pthread_cancel(input.native_handle());
     input.join();
-    std::cout<<"XD"<<std::endl;
     turnOff();
     
 }
