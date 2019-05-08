@@ -184,7 +184,7 @@ int server::Server::read_srv(char* buffer) {
     memset(buffer, 0, sizeof(buffer));
 
     //int bytes_rcv = recv(*cts_it, buffer, sizeof(buffer), 0);
-    if(!msg_manager.assembleMsg(*cts_it)) return 0;
+    if(!msg_manager.assembleMsg(*cts_it)) return 4;
     msg::Message msg = msg_manager.readMsg(*cts_it);
 /*
     if(bytes_rcv == -1) {
@@ -193,6 +193,9 @@ int server::Server::read_srv(char* buffer) {
     }
     else{*/
         std::cout << "Received: " << static_cast<int>(msg.type) << std::endl;
+        std::cout << "Message: ";
+        for(char c : msg.buffer) std::cout << c;
+        std::cout << std::endl;
     //}
 
     // if(bytes_rcv == -1) {

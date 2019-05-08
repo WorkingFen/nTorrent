@@ -4,13 +4,13 @@
 using namespace msg;
 
 int Message::sendMessage(int dst_socket)
-{//std::cout << buf_length << std::endl;
+{std::cout << "Message sent" << std::endl;
     if(write(dst_socket, &buf_length, sizeof(buf_length)) < 0)
     {
         std::cerr << "Unsuccessful write (body length)" << std::endl;
         return -1;
     };
-std::cout << static_cast<int>(type) << std::endl;
+
     if(write(dst_socket, &type, sizeof(type)) < 0)
     {
         std::cerr << "Unsuccessful write (msg type)" << std::endl;
@@ -108,7 +108,7 @@ bool MessageManager::assembleMsg(int socket)
 
     std::vector<char> buffer(remainingMsgSize(socket));
 
-    read(socket, &buffer[0], 2 * remainingMsgSize(socket));
+    read(socket, &buffer[0], remainingMsgSize(socket));
     buffers[socket].insert(buffers[socket].end(), buffer.begin(), buffer.end());
 
     if(remainingMsgSize(socket) > 0) return false;

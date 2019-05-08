@@ -233,6 +233,8 @@ void Client::run()
         {
             try
             {
+                if(command == 99) msg::Message(100,"Hello world!",13).sendMessage(*clientSockets.begin());  //test
+
                 input_value = command;
                 command = 0;
                 console->handleInput(input_value);          // aby nie zezwolić wątkowi na próbę wypisania menu
