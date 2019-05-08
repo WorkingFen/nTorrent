@@ -33,6 +33,11 @@ struct Message
     Message(Type t): type(t) {}
     Message(int t): type(static_cast<Type>(t)) {}
 
+    Message(int t, char* b, int bl): type(static_cast<Type>(t)), buf_length(bl)
+    {
+        buffer = std::vector<char>(b, b+bl);
+    }
+
     Message(Type t, char* b, int bl): type(t), buf_length(bl)
     {
         buffer = std::vector<char>(b, b+bl);

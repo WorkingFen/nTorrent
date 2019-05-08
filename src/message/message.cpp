@@ -4,13 +4,13 @@
 using namespace msg;
 
 int Message::sendMessage(int dst_socket)
-{
+{//std::cout << buf_length << std::endl;
     if(write(dst_socket, &buf_length, sizeof(buf_length)) < 0)
     {
         std::cerr << "Unsuccessful write (body length)" << std::endl;
         return -1;
     };
-
+std::cout << static_cast<int>(type) << std::endl;
     if(write(dst_socket, &type, sizeof(type)) < 0)
     {
         std::cerr << "Unsuccessful write (msg type)" << std::endl;
@@ -95,30 +95,35 @@ size_t MessageManager::remainingMsgSize(int socket)
 }
 
 bool MessageManager::assembleMsg(int socket)
-{std::cout << "Start" << std::endl;
+{
     if(!isMsgHeaderReady(socket)) 
     {
         std::vector<char> buffer(8-buffers[socket].size());
 
-        read(socket, &buffer[0], 8-buffers[socket].size());
-        buffers[socket].insert(buffers[socket].end(), buffer.begin(), buffer.end());
+        int bytesRead = read(socket, &buffer[0], 8-buffers[socket].size());
+        buffers[socket].insert(buffers[socket].end(), buffer.begin(), buffer.begin() + bytesRead);
 
         if(!isMsgHeaderReady(socket)) return false;
     }
-std::cout << "Start2" << std::endl;
+
     std::vector<char> buffer(remainingMsgSize(socket));
 
-    read(socket, &buffer[0], remainingMsgSize(socket));
+    read(socket, &buffer[0], 2 * remainingMsgSize(socket));
     buffers[socket].insert(buffers[socket].end(), buffer.begin(), buffer.end());
 
     if(remainingMsgSize(socket) > 0) return false;
-std::cout << "Star3t" << std::endl;
+    std::cout << "Dump" << std::endl;
+    for(char c : buffers[socket]) std::cout << static_cast<int>(c) << ' ';
+    std::cout << std::endl << "Dump end" << std::endl;
+
     Message msg;
-    msg.buf_length = popIntFromBuffer(socket) - 2*sizeof(int);std::cout << "Startbuflwngth" << std::endl;
-    msg.type = static_cast<Message::Type>(popIntFromBuffer(socket));  std::cout << "Startype" << std::endl;
-    msg.buffer = buffers[socket];//std::vector<char>(buffers[socket].begin(), buffers[socket].begin() + msg.buf_length);
-std::cout << "Star4t" << std::endl;
-    buffers[socket].erase(buffers[socket].begin(), buffers[socket].begin() + msg.buf_length);
+    msg.buf_length = popIntFromBuffer(socket);
+    msg.type = static_cast<Message::Type>(popIntFromBuffer(socket));
+    msg.buffer = std::vector<char>(buffers[socket].begin(), buffers[socket].begin() + msg.buf_length);
+    //msg.buffer = buffers[socket];//std::vector<char>(buffers[socket].begin(), buffers[socket].begin() + msg.buf_length);
+
+    //buffers[socket].erase(buffers[socket].begin(), buffers[socket].begin() + msg.buf_length);
+    buffers[socket].clear();
 
     msg_buffer.insert({socket, msg});
 
@@ -132,3 +137,9 @@ Message MessageManager::readMsg(int socket)
     msg_buffer.erase(socket);
     return msg;
 }
+
+/*
+13  0   0   0   100 0 0 0 72 101 108 108 111 32 119 111 114 108 100 33 0 
+
+13  0   0   0   0   0   0   0   100 0 0 0 72 101 108 108 111 32 119 111 114 
+ */
