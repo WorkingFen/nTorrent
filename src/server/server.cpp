@@ -159,12 +159,11 @@ void server::Server::accept_srv() {
 void server::Server::check_cts() {
     for(cts_it = clients_sockets.begin(); cts_it != clients_sockets.end(); ) {
         if(FD_ISSET(*cts_it, &bits_fd)) {
-            read_srv(msg_buf);
-            // int bytes_rcv = read_srv(msg_buf);
-            // if(bytes_rcv == SRVERROR || bytes_rcv == SRVNORM) {
-            //     close_ct();
-            //     continue;
-            // }
+            int bytes_rcv = read_srv(msg_buf);
+            if(bytes_rcv == SRVERROR || bytes_rcv == SRVNORM) {
+                close_ct();
+                continue;
+            }
             // if(write_srv(msg_buf, bytes_rcv+1) == SRVERROR) {
             //     close_ct();
             //     continue;
@@ -185,31 +184,26 @@ int server::Server::read_srv(char* buffer) {
     memset(buffer, 0, sizeof(buffer));
 
     //int bytes_rcv = recv(*cts_it, buffer, sizeof(buffer), 0);
-    if(!msg_manager.assembleMsg(*cts_it)) return 0;
+    if(!msg_manager.assembleMsg(*cts_it)) return 1;
     msg::Message msg = msg_manager.readMsg(*cts_it);
-/*
+
+    int bytes_rcv = msg_manager.lastReadResult();
+
     if(bytes_rcv == -1) {
         std::cerr << "There was a connection issue" << std::endl;
         return SRVERROR;
     }
-    else{*/
+    if(bytes_rcv == 0) {
+        std::cout << "The client disconnected" << std::endl;
+        return SRVNORM;
+    }
+    else{
         std::cout << "Received: " << static_cast<int>(msg.type) << std::endl;
         std::cout << "Message: ";
         for(char c : msg.buffer) std::cout << c;
         std::cout << std::endl;
-    //}
+    }
 
-    // if(bytes_rcv == -1) {
-    //     std::cerr << "There was a connection issue" << std::endl;
-    //     return SRVERROR;
-    // }
-    // if(bytes_rcv == 0) {
-    //     std::cout << "The client disconnected" << std::endl;
-    //     return SRVNORM;
-    // }
-
-    // Display message
-    // std::cout << "Received: " << std::string(buffer, 0, bytes_rcv) << std::endl;
     return msg.buf_length + 8;
 }
 
