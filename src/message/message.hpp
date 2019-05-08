@@ -20,7 +20,7 @@ struct Message
         disconnect_client = 100,
         keep_alive = 210,
 
-        file_info = 300,
+        file_info = 310,
 
         broken = -1,
     };
@@ -52,6 +52,8 @@ class MessageManager
         std::map<int, std::vector<char>> buffers;
         std::map<int, Message> msg_buffer;
 
+        int read_result;
+
         bool isMsgHeaderReady(int socket);
         size_t expectedMsgSize(int socket);
         size_t remainingMsgSize(int socket);
@@ -59,6 +61,7 @@ class MessageManager
         int popIntFromBuffer(int socket);
 
     public:
+        int lastReadResult() const;
         bool assembleMsg(int socket);
 
         //size_t countMsg(int socket);
