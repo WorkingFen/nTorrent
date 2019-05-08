@@ -3,6 +3,11 @@
 
 using namespace msg;
 
+int MessageManager::lastReadResult() const
+{
+    return read_result;
+}
+
 int Message::sendMessage(int dst_socket)
 {std::cout << "Message sent" << std::endl;
     if(write(dst_socket, &buf_length, sizeof(buf_length)) < 0)
@@ -100,15 +105,16 @@ bool MessageManager::assembleMsg(int socket)
     {
         std::vector<char> buffer(8-buffers[socket].size());
 
-        int bytesRead = read(socket, &buffer[0], 8-buffers[socket].size());
-        buffers[socket].insert(buffers[socket].end(), buffer.begin(), buffer.begin() + bytesRead);
+        read_result = read(socket, &buffer[0], 8-buffers[socket].size());
+        if(read_result == -1) return false;
+        buffers[socket].insert(buffers[socket].end(), buffer.begin(), buffer.begin() + read_result);
 
         if(!isMsgHeaderReady(socket)) return false;
     }
 
     std::vector<char> buffer(remainingMsgSize(socket));
 
-    read(socket, &buffer[0], remainingMsgSize(socket));
+    read_result = read(socket, &buffer[0], remainingMsgSize(socket));
     buffers[socket].insert(buffers[socket].end(), buffer.begin(), buffer.end());
 
     if(remainingMsgSize(socket) > 0) return false;

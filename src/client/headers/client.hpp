@@ -55,7 +55,8 @@ class Client
         void turnOff();                                         // metoda kończąca wszystkie połączenia
         void handleMessages();
         void handleCommands();
-        void run();                                             // pętla z selectem
+        void sendFilesInfo();
+        void run();                                                // pętla z selectem
         //void handleMessage(Message msg);
         //void disconnectFrom(int socket);
         void registerSignalHandler(void (*handler)(int));

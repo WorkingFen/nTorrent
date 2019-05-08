@@ -4,6 +4,8 @@
 #include <algorithm>
 #include <string>
 
+using namespace msg;
+
 Client::Client(const char ipAddr[15], const int& port, const char serverIpAddr[15], const int& serverPort) : clientSocketsNum(0), serverSocketsNum(0), maxFd(0), endFlag(0)
 {
     prepareSockaddrStruct(self, ipAddr, port);
@@ -213,6 +215,17 @@ void Client::handleCommands()
     }
 
     commandLock.unlock();  
+}
+
+void Client::sendFilesInfo()
+{
+    std::vector<std::string> file_names = std::move(console->getDirFiles());
+
+    for(std::string fname : file_names)
+    {
+        msg::Message fileinfo(310);
+        fileinfo.buffer.insert(fileinfo.buffer.end(), fname.begin(), fname.end());
+    }
 }
 
 void Client::run()
