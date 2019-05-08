@@ -44,6 +44,7 @@ typedef std::list<int>::iterator cts_list_it;
 namespace server {
     class Server{
         private:    
+            msg::MessageManager msg_manager;
             int listener;               // Server-listener socket
             sockaddr_in server;         // Server IP:port
             char msg_buf[4096];         // Buffer for messages
@@ -56,7 +57,6 @@ namespace server {
             char host[NI_MAXHOST];
             char svc[NI_MAXSERV];
 #endif
-            msg::MessageManager msg_manager;
             std::thread signal_thread;  // Thread for signal handling
             sigset_t signal_set;        // Signal which should be used for set_SIGmask
             bool sigint_flag;           // Signal of ctrl+C usage

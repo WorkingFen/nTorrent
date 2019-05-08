@@ -159,15 +159,16 @@ void server::Server::accept_srv() {
 void server::Server::check_cts() {
     for(cts_it = clients_sockets.begin(); cts_it != clients_sockets.end(); ) {
         if(FD_ISSET(*cts_it, &bits_fd)) {
-            int bytes_rcv = read_srv(msg_buf);
-            if(bytes_rcv == SRVERROR || bytes_rcv == SRVNORM) {
-                close_ct();
-                continue;
-            }
-            if(write_srv(msg_buf, bytes_rcv+1) == SRVERROR) {
-                close_ct();
-                continue;
-            }
+            read_srv(msg_buf);
+            // int bytes_rcv = read_srv(msg_buf);
+            // if(bytes_rcv == SRVERROR || bytes_rcv == SRVNORM) {
+            //     close_ct();
+            //     continue;
+            // }
+            // if(write_srv(msg_buf, bytes_rcv+1) == SRVERROR) {
+            //     close_ct();
+            //     continue;
+            // }
         }
         ++cts_it;
     }
@@ -184,7 +185,7 @@ int server::Server::read_srv(char* buffer) {
     memset(buffer, 0, sizeof(buffer));
 
     //int bytes_rcv = recv(*cts_it, buffer, sizeof(buffer), 0);
-    if(!msg_manager.assembleMsg(*cts_it)) return 4;
+    if(!msg_manager.assembleMsg(*cts_it)) return 0;
     msg::Message msg = msg_manager.readMsg(*cts_it);
 /*
     if(bytes_rcv == -1) {
