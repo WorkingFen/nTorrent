@@ -21,43 +21,44 @@ ConsoleInterface::~ConsoleInterface()
     closedir(fileDir);
 }
 
+void ConsoleInterface::printConnected()
+{
+    cout<<"Menu:"<<endl
+        <<"Aktualny stan: połączony"<<endl
+        <<"1. Wyświetl zawartość katalogu"<<endl
+        <<"2. Pobierz plik"<<endl
+        <<"3. Uaktualnij stan plików"<<endl;
+}
+
 void ConsoleInterface::printMenu()
 {
     switch(state){
         case State::up:
             cout<<"Menu:"<<endl
                 <<"Aktualny stan: niepołączony"<<endl
-                <<"1. Połącz z serwerem"<<endl
-                <<"9. Zakończ program"<<endl;
+                <<"1. Połącz z serwerem"<<endl;
             break;
+
         case State::connected:
-            cout<<"Menu:"<<endl
-                <<"Aktualny stan: połączony"<<endl
-                <<"1. Wyświetl zawartość katalogu"<<endl
-                <<"2. Pobierz plik"<<endl
-                <<"3. Uaktualnij stan plików"<<endl
-                <<"9. Zakończ program"<<endl;
+            printConnected();
             break;
+
         case State::seeding:
-            cout<<"Menu:"<<endl
-                <<"Aktualny stan: udostępnianie"<<endl
-                <<"1. Przestań udostępniać"<<endl
-                <<"2. Zakończ program"<<endl
-                <<"3. Zakończ program"<<endl
-                <<"4. Zakończ program"<<endl;
+            printConnected();
+            cout<<"4. Zakończ udostępniać plik"<<endl;
             break;
+
         case State::leeching:
-            cout<<"Menu:"<<endl
-                <<"Aktualny stan: pobieranie"<<endl
-                <<"1. Połącz z serwerem"<<endl
-                <<"2. Zakończ program"<<endl;
+            printConnected();
+            cout<<"4. Zakończ pobierać plik"<<endl;
             break;
+
         case State::both:
-            cout<<"Menu:"<<endl
-                <<"Aktualny stan: udostępnianie/pobieranie"<<endl
-                <<"1. Połącz z serwerem"<<endl
-                <<"2. Zakończ program"<<endl;
+            printConnected();
+            cout<<"4. Zakończ pobierać plik"<<endl
+                <<"5. Zakończ udostępniać plik"<<endl;
             break;
+
         case State::down:
             return;
 
@@ -65,32 +66,19 @@ void ConsoleInterface::printMenu()
             cout<<"Menu error"<<endl;
             return;
     }
+
+    cout<<"9. Zakończ program"<<endl;
     cout<<"Wprowadź numer opcji: ";
 
 }
 
 void ConsoleInterface::handleInput(int input){
     //std::system("clear");
-    switch(state){
-        case State::up:
-            handleInputUp(input);
-            break;
-        case State::connected:
-            handleInputConnected(input);
-            break;
-        case State::seeding:
-            handleInputSeeding(input);
-            break;
-        case State::leeching:
-            handleInputLeeching(input);
-            break;
-        case State::both:
-            handleInputBoth(input);
-            break;
-        default:
-            //TODO - przy State::down chyba nie powinno się nic dziać, pętla zakończy działanie po dokończeniu obiegu
-            break;
-    }
+    
+    if(state == State::up)  handleInputUp(input);
+    else if(state == State::connected || state == State::seeding || state == State::seeding || state == State::both) handleInputConnected(input); // prawie takie same
+    else return;
+
 }
 
 void ConsoleInterface::handleInputUp(int input){
@@ -111,45 +99,33 @@ void ConsoleInterface::handleInputUp(int input){
 
     }
 }
+/*
+    1. Wyświetl zawartość katalogu
+    2. Pobierz plik
+    3. Uaktualnij stan plików
+    4. Zakończ pobierać plik
+    5. Zakończ udostępniać plik
 
+*/
 void ConsoleInterface::handleInputConnected(int input){
     switch(input){
         case 1:
                 printFolderContent();
                 break;
-                
-        case 9:
-                state = State::down;
-                break;
-
-        default:
+        
+        case 2:
                 //TODO
                 break;
-
-    }
-}
-
-void ConsoleInterface::handleInputSeeding(int input){
-    switch(input){
-        case 1:
-                printFolderContent();
-                break;
-                
-        case 9:
-                state = State::down;
+        case 3:
                 break;
 
-        default:
-                //TODO
+        case 4:
+                if(state == State::seeding) {stopSeeding();}
+                if(state == State::leeching || state == State::both) {stopLeeching();}
                 break;
 
-    }
-}
-
-void ConsoleInterface::handleInputLeeching(int input){
-    switch(input){
-        case 1:
-                printFolderContent();
+        case 5:
+                if(state == State::both) {stopSeeding();}
                 break;
                 
         case 9:
@@ -163,21 +139,14 @@ void ConsoleInterface::handleInputLeeching(int input){
     }
 }
 
-void ConsoleInterface::handleInputBoth(int input){
-    switch(input){
-        case 1:
-                printFolderContent();
-                break;
-                
-        case 9:
-                state = State::down;
-                break;
+void ConsoleInterface::stopSeeding()
+{
+    //TODO
+}
 
-        default:
-                //TODO
-                break;
-
-    }
+void ConsoleInterface::stopLeeching()
+{
+    //TODO
 }
 
 State ConsoleInterface::getState(){

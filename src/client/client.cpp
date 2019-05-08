@@ -9,14 +9,27 @@ void Client::input_thread()
 {
     std::string input;
     std::unique_lock<std::mutex> lock(inputLock);
-    while(!interrupted_flag && console->getState() != State::down)
+    while(!interrupted_flag && console->getState() != State::down )
     {
         condition.wait(lock);
-        console->printMenu();
+
+        if(endFlag==0)
+        {
+            console->printMenu();
+        }
+        else
+        {
+            break;
+        }
+        
         std::cin>>input;
         //pthread_mutex_lock(&input_lock);
         commandLock.lock();
-        command = std::stoi(input);
+
+        // TODO inne ify,   try 
+        try{
+            command = std::stoi(input);
+        } catch(std::exception& e) { command=-1;}       // -1 dla inputHandler
         commandLock.unlock();
         //pthread_mutex_unlock(&input_lock);
     }
@@ -30,7 +43,7 @@ void Client::prepareSockaddrStruct(struct sockaddr_in& x, const char ipAddr[15],
     x.sin_port = htons(port);
 }
 
-Client::Client(const char ipAddr[15], const int& port, const char serverIpAddr[15], const int& serverPort) : clientSocketsNum(0), serverSocketsNum(0), maxFd(0)
+Client::Client(const char ipAddr[15], const int& port, const char serverIpAddr[15], const int& serverPort) : clientSocketsNum(0), serverSocketsNum(0), maxFd(0), endFlag(0)
 {
     prepareSockaddrStruct(self, ipAddr, port);
     prepareSockaddrStruct(server, serverIpAddr, serverPort);
@@ -109,7 +122,7 @@ void Client::connectTo(const struct sockaddr_in &address)
     if(connect(sock, (struct sockaddr *) &address, sizeof address) == -1)         // TODO obsługa błędów - dodać poprawne zamknięcie
         throw std::runtime_error ("connect call failed");
 
-    std::cout << "Conected to sbd" << std::endl;
+    std::cout << "Connected to sbd" << std::endl;
 
     clientSockets.push_back(sock);              // TODO obsługa błędów
 
@@ -217,29 +230,32 @@ void Client::run()
         //pthread_mutex_lock(&input_lock);
         commandLock.lock();
 
-        if(command > 0)
+        if(command != 0)
         {
-            if(command > 0 && command <= 9){
-                try{
-                    input_value = command;
-                    command = 0;
-                    console->handleInput(input_value);
-                    if(console->getState() != State::down)                  // aby nie zezwolić wątkowi na próbę wypisania menu
-                        condition.notify_one();
-                }
-                catch(std::exception& e) { std::cerr << e.what() << std::endl; break;}
-            } else 
+            try
             {
+                input_value = command;
                 command = 0;
-                sendMessage(*clientSockets.begin(), msg::Message(100));
+                console->handleInput(input_value);          // aby nie zezwolić wątkowi na próbę wypisania menu
+
+                if(console->getState() == State::down)
+                    endFlag=1;
+
+                condition.notify_one();
             }
+            catch(std::exception& e) { std::cerr << e.what() << std::endl; endFlag=1; condition.notify_one(); break;}
         }
 
         commandLock.unlock();//pthread_mutex_unlock(&input_lock);
     }
-	signal_thread.detach();																			// czekaj aż wątek signal_thread skończy działać				
-	input.detach();																									// input blokuje się na std::cin 
+	pthread_cancel(signal_thread.native_handle());
+    signal_thread.join();
+    std::cout<<"XD"<<std::endl;
+    pthread_cancel(input.native_handle());
+    input.join();
+    std::cout<<"XD"<<std::endl;
     turnOff();
+    
 }
 
 const struct sockaddr_in& Client::getServer() const

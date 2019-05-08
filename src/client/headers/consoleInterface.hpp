@@ -37,12 +37,13 @@ class ConsoleInterface
     std::vector<std::string> getDirFiles();
     void calculateHashes();
     void printMenu();
+    void printConnected();
     void handleInput(int input);
     void handleInputUp(int input);
     void handleInputConnected(int connected);
-    void handleInputSeeding(int input);
-    void handleInputLeeching(int input);
-    void handleInputBoth(int input);
+
+    void stopSeeding();
+    void stopLeeching();
     State getState();
 };
 

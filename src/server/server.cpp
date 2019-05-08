@@ -50,7 +50,8 @@ server::Server::Server(const char srv_ip[15], const int& srv_port) : sigint_flag
         accept_srv();
         check_cts();
     }
-    signal_thread.detach();
+    pthread_cancel(signal_thread.native_handle());
+    signal_thread.join();
     shutdown();
 }
 

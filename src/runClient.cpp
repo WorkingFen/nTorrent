@@ -17,6 +17,7 @@ int main()
         std::unique_ptr<ConsoleInterface> console(new ConsoleInterface(client));
         client.setConsoleInterface(console);
         client.run();
+
     }
     catch(std::exception& e) { std::cerr << e.what() << std::endl;}
         /*
