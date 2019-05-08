@@ -246,7 +246,7 @@ void Client::run()
             } else 
             {
                 command = 0;
-                msg::Message(100).sendMessage(*clientSockets.begin());
+                msg::Message(100,"Hello world!",13).sendMessage(*clientSockets.begin());
                 condition.notify_one();
             }
         }
