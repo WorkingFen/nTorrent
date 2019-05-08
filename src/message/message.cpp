@@ -112,9 +112,6 @@ bool MessageManager::assembleMsg(int socket)
     buffers[socket].insert(buffers[socket].end(), buffer.begin(), buffer.end());
 
     if(remainingMsgSize(socket) > 0) return false;
-    std::cout << "Dump" << std::endl;
-    for(char c : buffers[socket]) std::cout << static_cast<int>(c) << ' ';
-    std::cout << std::endl << "Dump end" << std::endl;
 
     Message msg;
     msg.buf_length = popIntFromBuffer(socket);

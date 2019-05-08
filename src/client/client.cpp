@@ -4,44 +4,6 @@
 #include <algorithm>
 #include <string>
 
-void Client::input_thread()
-{
-    std::string input;
-    std::unique_lock<std::mutex> lock(inputLock);
-    while(!interrupted_flag && console->getState() != State::down )
-    {
-        condition.wait(lock);
-
-        if(endFlag==0)
-        {
-            console->printMenu();
-        }
-        else
-        {
-            break;
-        }
-        
-        std::cin>>input;
-        //pthread_mutex_lock(&input_lock);
-        commandLock.lock();
-
-        try{
-            command = std::stoi(input);
-        } catch(std::exception& e) { command=-1;}       // -1 dla inputHandler
-        commandLock.unlock();
-        //pthread_mutex_unlock(&input_lock);
-    }
-    std::cout << "input end" << std::endl;
-}
-
-void Client::prepareSockaddrStruct(struct sockaddr_in& x, const char ipAddr[15], const int& port)
-{
-    x.sin_family = AF_INET;
-    if( (inet_pton(AF_INET, ipAddr, &x.sin_addr)) <= 0)
-        throw std::invalid_argument("Improper IPv4 address: " + std::string(ipAddr));
-    x.sin_port = htons(port);
-}
-
 Client::Client(const char ipAddr[15], const int& port, const char serverIpAddr[15], const int& serverPort) : clientSocketsNum(0), serverSocketsNum(0), maxFd(0), endFlag(0)
 {
     prepareSockaddrStruct(self, ipAddr, port);
@@ -82,6 +44,50 @@ Client::Client(const char ipAddr[15], const int& port, const char serverIpAddr[1
     std::cout << "Successfully connected and listening at: " << ipAddr << ":" << this->port << std::endl;
 }
 
+
+Client::~Client()
+{
+    std::cout << "Disconnected" << std::endl;  
+}
+
+void Client::input_thread()
+{
+    std::string input;
+    std::unique_lock<std::mutex> lock(inputLock);
+    while(!interrupted_flag && console->getState() != State::down )
+    {
+        condition.wait(lock);
+
+        if(endFlag==0)
+        {
+            console->printMenu();
+        }
+        else
+        {
+            break;
+        }
+        
+        std::cin>>input;
+        //pthread_mutex_lock(&input_lock);
+        commandLock.lock();
+
+        try{
+            command = std::stoi(input);
+        } catch(std::exception& e) { command=-1;}       // -1 dla inputHandler
+        commandLock.unlock();
+        //pthread_mutex_unlock(&input_lock);
+    }
+    std::cout << "input end" << std::endl;
+}
+
+void Client::prepareSockaddrStruct(struct sockaddr_in& x, const char ipAddr[15], const int& port)
+{
+    x.sin_family = AF_INET;
+    if( (inet_pton(AF_INET, ipAddr, &x.sin_addr)) <= 0)
+        throw std::invalid_argument("Improper IPv4 address: " + std::string(ipAddr));
+    x.sin_port = htons(port);
+}
+
 void Client::turnOff()
 {
     int result;
@@ -107,11 +113,6 @@ void Client::turnOff()
         }
         std::cout<<"losed "<<*it<<" server socket"<<std::endl;
     }
-}
-
-Client::~Client()
-{
-    std::cout << "Disconnected" << std::endl;  
 }
 
 void Client::connectTo(const struct sockaddr_in &address)
@@ -154,22 +155,76 @@ void Client::setSigmask(){
         std::cerr<<"Setting signal mask failed"<<std::endl;
 }
 
+void Client::handleMessages()
+{
+    for(auto it=serverSockets.begin(); it!=serverSockets.end();)                // pętla dla serverSockets -> TODO pętla dla cilentSockets
+    {
+        if(FD_ISSET(*it, &ready) && msg_manager.assembleMsg(*it))
+        {
+            msg::Message msg = msg_manager.readMsg(*it);
+
+            std::cout << (int) msg.type << std::endl;
+            if(msg.type == msg::Message::Type::disconnect_client)                                // tu msg
+            {
+                close(*it);
+                it = serverSockets.erase(it);
+                serverSocketsNum--;
+
+                std::cout << "Connection severed" << std::endl;
+            }
+            else
+            {
+                ++it;
+            }
+        }
+        else
+        {
+            ++it;
+        }
+    }
+}
+
+void Client::handleCommands()
+{
+    commandLock.lock();
+
+    if(command != 0)
+    {
+        try
+        {
+            if(command == 99) msg::Message(100,"Hello world!",13).sendMessage(*clientSockets.begin());  //test
+
+            int input_value = command;      // wartość przekazywana do inputHandler w consoleInterface
+            command = 0;
+            console->handleInput(input_value);          // aby nie zezwolić wątkowi na próbę wypisania menu
+
+            if(console->getState() == State::down)
+                endFlag=1;
+
+            condition.notify_one();
+        }
+        catch(std::exception& e) 
+        { 
+            std::cerr << e.what() << std::endl; 
+            endFlag=1; 
+            condition.notify_one(); 
+            run_stop_flag=1;
+        }
+    }
+
+    commandLock.unlock();  
+}
 
 void Client::run()
 {
-
     setSigmask();       // Set sigmask for all threads
-
     signal_thread = std::thread(&Client::signal_waiter, this);        // Create the sigwait thread
 
-    //pthread_create(&input, 0, input_thread, 0);
     input = std::thread(&Client::input_thread, this);
     sleep(1);
-    condition.notify_one();
+    condition.notify_one(); 
 
-    int input_value;        // wartość przekazywana do inputHandler w consoleInterface
-    // registerSignalHandler(turnOff);
-    while(!interrupted_flag && console->getState() != State::down)
+    while(!interrupted_flag && !run_stop_flag && console->getState() != State::down)
     {
 
         FD_ZERO(&ready);
@@ -184,12 +239,8 @@ void Client::run()
         to.tv_sec = 1;
         to.tv_usec = 0;
 
-
-        if ( (select(maxFd, &ready, (fd_set *)0, (fd_set *)0, &to)) == -1) {
+        if ( (select(maxFd, &ready, (fd_set *)0, (fd_set *)0, &to)) == -1)
              throw std::runtime_error ("select call failed");
-        }
-
-        //std::cout << maxFd << " " << FD_ISSET(sockFd, &ready) << std::endl;
 
         if (FD_ISSET(sockFd, &ready) && serverSocketsNum<5)
         {
@@ -200,61 +251,15 @@ void Client::run()
             std::cout << "serverSocketsNum = " << serverSocketsNum << std::endl;
         }
 
-        for(auto it=serverSockets.begin(); it!=serverSockets.end();)                // pętla dla serverSockets -> TODO pętla dla cilentSockets
-        {
-            if(FD_ISSET(*it, &ready) && msg_manager.assembleMsg(*it))
-            {
-                msg::Message msg = msg_manager.readMsg(*it);
-
-                std::cout << (int) msg.type << std::endl;
-                if(msg.type == msg::Message::Type::disconnect_client)                                // tu msg
-                {
-                    close(*it);
-                    it = serverSockets.erase(it);
-                    serverSocketsNum--;
-
-                    std::cout << "Connection severed" << std::endl;
-                }
-                else
-                {
-                    ++it;
-                }
-            }
-            else
-            {
-                ++it;
-            }
-        }
-        
-        //pthread_mutex_lock(&input_lock);
-        commandLock.lock();
-
-        if(command != 0)
-        {
-            try
-            {
-                if(command == 99) msg::Message(100,"Hello world!",13).sendMessage(*clientSockets.begin());  //test
-
-                input_value = command;
-                command = 0;
-                console->handleInput(input_value);          // aby nie zezwolić wątkowi na próbę wypisania menu
-
-                if(console->getState() == State::down)
-                    endFlag=1;
-
-                condition.notify_one();
-            }
-            catch(std::exception& e) { std::cerr << e.what() << std::endl; endFlag=1; condition.notify_one(); break;}
-        }
-
-        commandLock.unlock();//pthread_mutex_unlock(&input_lock);
+        handleMessages();
+        handleCommands();
     }
+
 	pthread_cancel(signal_thread.native_handle());
     signal_thread.join();
     pthread_cancel(input.native_handle());
     input.join();
     turnOff();
-    
 }
 
 const struct sockaddr_in& Client::getServer() const

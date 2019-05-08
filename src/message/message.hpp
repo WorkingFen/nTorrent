@@ -20,6 +20,8 @@ struct Message
         disconnect_client = 100,
         keep_alive = 210,
 
+        file_info = 300,
+
         broken = -1,
     };
 
