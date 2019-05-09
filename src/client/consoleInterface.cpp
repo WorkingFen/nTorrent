@@ -85,7 +85,8 @@ void ConsoleInterface::handleInputUp(int input){
     switch(input){
         case 1:
                 client.connectTo(client.getServer());
-                calculateHashes();
+                //calculateHashes();
+                client.sendFilesInfo();
                 state = State::connected;
                 break;
                 

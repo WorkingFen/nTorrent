@@ -184,7 +184,7 @@ int server::Server::read_srv(char* buffer) {
     memset(buffer, 0, sizeof(buffer));
 
     //int bytes_rcv = recv(*cts_it, buffer, sizeof(buffer), 0);         // Needed for connection issues
-    if(!msg_manager.assembleMsg(*cts_it)) return SRVNORM;
+    if(!msg_manager.assembleMsg(*cts_it)) return msg_manager.lastReadResult();
     msg::Message msg = msg_manager.readMsg(*cts_it);
 
     int bytes_rcv = msg_manager.lastReadResult();
@@ -201,6 +201,9 @@ int server::Server::read_srv(char* buffer) {
         std::cout << "Received: " << static_cast<int>(msg.type) << std::endl;
         std::cout << "Message: ";
         for(char c : msg.buffer) std::cout << c;
+        std::cout << std::endl;
+        std::cout << "Message bytes: " << std::endl;
+        for(char c : msg.buffer) std::cout << static_cast<int>(c) << " ";
         std::cout << std::endl;
     }
 

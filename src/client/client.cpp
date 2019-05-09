@@ -1,4 +1,6 @@
 #include "headers/client.hpp"
+#include "../hashing/headers/hash.h"
+#include "../hashing/headers/sha256.h"
 #include <stdexcept>
 #include <string.h>
 #include <algorithm>
@@ -132,8 +134,6 @@ void Client::connectTo(const struct sockaddr_in &address)
 
     if(address.sin_addr.s_addr != server.sin_addr.s_addr)
         clientSocketsNum++;
-
-    //sendMessage(sock, msg::Message(100));
 }
 
 void Client::signal_waiter()
@@ -223,8 +223,30 @@ void Client::sendFilesInfo()
 
     for(std::string fname : file_names)
     {
-        msg::Message fileinfo(310);
-        fileinfo.buffer.insert(fileinfo.buffer.end(), fname.begin(), fname.end());
+        std::vector<std::string> hashes = hashPieces("clientFiles/" + fname, pieceSize);    //fileDIRname instead of clientFiles
+        int i=0;
+        
+        for(std::string hash : hashes)
+        {
+            msg::Message fileinfo(310);
+
+            int name_size = fname.size();
+            const char* ns = static_cast<char*>( static_cast<void*>(&name_size) );
+            fileinfo.buffer.insert(fileinfo.buffer.end(), ns, ns + sizeof(int));    //name size
+
+            fileinfo.buffer.insert(fileinfo.buffer.end(), fname.begin(), fname.end());  //file name
+
+            const char* c = static_cast<char*>( static_cast<void*>(&i) );
+            fileinfo.buffer.insert(fileinfo.buffer.end(), c, c + sizeof(int));  //piece number
+
+            fileinfo.buffer.insert(fileinfo.buffer.end(), hash.begin(), hash.end());    //hash for that piece
+
+            fileinfo.buf_length = fileinfo.buffer.size();
+
+            fileinfo.sendMessage(*clientSockets.begin());   //nalezy wyroznic jakos socket przez ktory komunikujemy sie z serwerem
+
+            ++i;
+        }
     }
 }
 
@@ -284,27 +306,3 @@ void Client::setConsoleInterface(ConsoleInterfacePtr& x)
 {
     console = std::move(x);
 }
-
-/*
-void Client::handleMessage(int msg, int src_socket)
-{
-    switch(msg)
-    {
-        case 100: disconnectFrom(src_socket); break;
-        default: std::cerr << "Unknown message" << std::endl;
-    }
-}*/
-
-/*
-void Client::disconnectFrom(int socket)
-{
-    auto it = find(serverSockets.begin(), serverSockets.end(), socket);
-
-    if(it == serverSockets.end()) std::cerr << "Closing "<<socket<<" unsuccessful" << std::endl;
-
-    close(*it);
-    serverSockets.erase(it);
-    //update maxFd ???
-}*/
-
-

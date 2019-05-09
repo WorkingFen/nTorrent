@@ -19,7 +19,7 @@ string hashOnePiece(istream & stream, int pieceLength) {
 
 	string hash = sha256(bytes);
 
-	cout<<"sha256:"<<hash<<endl;
+	//cout<<"sha256:"<<hash<<endl;
 
 	return hash;
 }

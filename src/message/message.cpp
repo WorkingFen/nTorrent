@@ -115,6 +115,7 @@ bool MessageManager::assembleMsg(int socket)
     std::vector<char> buffer(remainingMsgSize(socket));
 
     read_result = read(socket, &buffer[0], remainingMsgSize(socket));
+    if(read_result == -1) return false;
     buffers[socket].insert(buffers[socket].end(), buffer.begin(), buffer.end());
 
     if(remainingMsgSize(socket) > 0) return false;

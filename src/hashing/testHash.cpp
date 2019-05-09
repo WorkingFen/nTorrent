@@ -5,10 +5,14 @@ using namespace std;
 
 
 int main (){
-    vector<string> hashes = hashPieces("example.txt", 2);
+    vector<string> hashes = hashPieces("example.txt", 10);
 
-    for(auto it=hashes.begin(); it != hashes.end(); ++it){
-        cout<<"sha256:"<<*it<<endl;
+    for(string s : hashes)
+    {
+        cout << "sha256:" << s <<endl;
     }
+
+    cout << hashes.size() << endl;
+
     return 0;
 }
