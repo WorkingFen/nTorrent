@@ -217,37 +217,39 @@ void Client::handleCommands()
     commandLock.unlock();  
 }
 
+void Client::sendFileInfo(int socket, std::string directory, std::string fname)
+{
+    std::vector<std::string> hashes = hashPieces(directory + "/" + fname, pieceSize);    //fileDIRname instead of clientFiles
+    int i=0;
+    
+    for(std::string hash : hashes)
+    {
+        msg::Message fileinfo(310);
+
+        int name_size = fname.size();
+        const char* ns = static_cast<char*>( static_cast<void*>(&name_size) );
+        fileinfo.buffer.insert(fileinfo.buffer.end(), ns, ns + sizeof(int));    //name size
+
+        fileinfo.buffer.insert(fileinfo.buffer.end(), fname.begin(), fname.end());  //file name
+
+        const char* c = static_cast<char*>( static_cast<void*>(&i) );
+        fileinfo.buffer.insert(fileinfo.buffer.end(), c, c + sizeof(int));  //piece number
+
+        fileinfo.buffer.insert(fileinfo.buffer.end(), hash.begin(), hash.end());    //hash for that piece
+
+        fileinfo.buf_length = fileinfo.buffer.size();
+
+        fileinfo.sendMessage(socket);   //nalezy wyroznic jakos socket przez ktory komunikujemy sie z serwerem
+
+        ++i;
+    }    
+}
+
 void Client::sendFilesInfo()
 {
     std::vector<std::string> file_names = std::move(console->getDirFiles());
 
-    for(std::string fname : file_names)
-    {
-        std::vector<std::string> hashes = hashPieces("clientFiles/" + fname, pieceSize);    //fileDIRname instead of clientFiles
-        int i=0;
-        
-        for(std::string hash : hashes)
-        {
-            msg::Message fileinfo(310);
-
-            int name_size = fname.size();
-            const char* ns = static_cast<char*>( static_cast<void*>(&name_size) );
-            fileinfo.buffer.insert(fileinfo.buffer.end(), ns, ns + sizeof(int));    //name size
-
-            fileinfo.buffer.insert(fileinfo.buffer.end(), fname.begin(), fname.end());  //file name
-
-            const char* c = static_cast<char*>( static_cast<void*>(&i) );
-            fileinfo.buffer.insert(fileinfo.buffer.end(), c, c + sizeof(int));  //piece number
-
-            fileinfo.buffer.insert(fileinfo.buffer.end(), hash.begin(), hash.end());    //hash for that piece
-
-            fileinfo.buf_length = fileinfo.buffer.size();
-
-            fileinfo.sendMessage(*clientSockets.begin());   //nalezy wyroznic jakos socket przez ktory komunikujemy sie z serwerem
-
-            ++i;
-        }
-    }
+    for(std::string fname : file_names) sendFileInfo(*clientSockets.begin(), "clientFiles", fname);
 }
 
 void Client::run()

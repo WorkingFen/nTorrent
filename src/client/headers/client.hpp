@@ -57,13 +57,14 @@ class Client
         void turnOff();                                         // metoda kończąca wszystkie połączenia
         void handleMessages();
         void handleCommands();
-        void sendFilesInfo();
         void run();                                                // pętla z selectem
-        //void handleMessage(Message msg);
-        //void disconnectFrom(int socket);
+
         void registerSignalHandler(void (*handler)(int));
         const struct sockaddr_in& getServer() const;
         void setConsoleInterface(ConsoleInterfacePtr& x);
+
+        void sendFileInfo(int socket, std::string directory, std::string filename);
+        void sendFilesInfo();
 };
 
 #endif
