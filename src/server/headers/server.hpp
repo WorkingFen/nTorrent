@@ -52,7 +52,11 @@ namespace server {
             cts_list_it cts_it;         // Iterator of clients' list
             int max_fd;                 // Max file descriptor number
             timeval timeout;            // Timeout for select_ct()
-            fd_set bits_fd;             // Bits for file descriptors 
+            fd_set bits_fd;             // Bits for file descriptors
+
+            // Json
+            Json::Reader reader;
+            Json::Value root; 
 #ifdef CTNAME
             char host[NI_MAXHOST];
             char svc[NI_MAXSERV];
