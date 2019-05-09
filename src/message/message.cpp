@@ -30,51 +30,7 @@ int Message::sendMessage(int dst_socket)
 
     return buf_length + 2*sizeof(int);
 }
-/*
-int Message::readMessage(int socketFd, Message &message)
-{
-    Message msg;
-    int bytesRead = 0;
-    int length = 4;
-    char buf_msg[4];
 
-    while(bytesRead < length)
-    {
-        int readReturn = read(socketFd, buf_msg, length);
-        if(readReturn < 1) return -1;//throw std::runtime_error("Unsuccessful read");
-        bytesRead += readReturn;
-    }
-
-    msg.type = static_cast<Message::Type>((buf_msg[3] << 24) | (buf_msg[2] << 16) | (buf_msg[1] << 8) | (buf_msg[0]));
-
-    char buf_length[4];
-    bytesRead = 0;
-
-    while(bytesRead < length)
-    {
-        int readReturn = read(socketFd, buf_length, length);
-        if(readReturn < 1) return -1;//throw std::runtime_error("Unsuccessful read");
-        bytesRead += readReturn;
-    }
-
-    msg.buf_length = (buf_length[3] << 24) | (buf_length[2] << 16) | (buf_length[1] << 8) | (buf_length[0]);
-
-    std::vector<char> buffer(msg.buf_length);
-    bytesRead = 0;
-
-    while(bytesRead < msg.buf_length)
-    {
-        int readReturn = read(socketFd, &buffer[0], msg.buf_length);
-        if(readReturn < 1) return -1;//throw std::runtime_error("Unsuccessful read");
-        bytesRead += readReturn;
-    }
-
-    msg.buffer = buffer;
-
-    message = msg;
-    return message.buf_length + sizeof(message.type) + sizeof(message.buf_length);
-}
-*/
 int MessageManager::popIntFromBuffer(int socket)
 {
     int ret = (buffers[socket][3] << 24) | (buffers[socket][2] << 16) | (buffers[socket][1] << 8) | (buffers[socket][0]);
@@ -141,9 +97,3 @@ Message MessageManager::readMsg(int socket)
     msg_buffer.erase(socket);
     return msg;
 }
-
-/*
-13  0   0   0   100 0 0 0 72 101 108 108 111 32 119 111 114 108 100 33 0 
-
-13  0   0   0   0   0   0   0   100 0 0 0 72 101 108 108 111 32 119 111 114 
- */
