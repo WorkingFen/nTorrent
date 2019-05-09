@@ -194,7 +194,7 @@ void Client::handleCommands()
     {
         try
         {
-            if(command == 99) msg::Message(100,"Hello world!",13).sendMessage(*clientSockets.begin());  //test
+            if(command == 99) msg::Message(404,"Hello world!",13).sendMessage(*clientSockets.begin());  //test
 
             int input_value = command;      // wartość przekazywana do inputHandler w consoleInterface
             command = 0;

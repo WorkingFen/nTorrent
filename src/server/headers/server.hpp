@@ -55,8 +55,8 @@ namespace server {
             fd_set bits_fd;             // Bits for file descriptors
 
             // Json
-            Json::Reader reader;
-            Json::Value root; 
+            // Json::Reader reader;
+            // Json::Value root; 
 #ifdef CTNAME
             char host[NI_MAXHOST];
             char svc[NI_MAXSERV];

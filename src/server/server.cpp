@@ -181,23 +181,40 @@ int server::Server::write_srv(const void* buffer, size_t msg_size) {
 
 // Read message from client with ID: client_id
 int server::Server::read_srv(char* buffer) {
-    memset(buffer, 0, sizeof(buffer));
+    //memset(buffer, 0, sizeof(buffer));
 
-    //int bytes_rcv = recv(*cts_it, buffer, sizeof(buffer), 0);         // Needed for connection issues
-    if(!msg_manager.assembleMsg(*cts_it)) return msg_manager.lastReadResult();
+    //int bytes_rcv = recv(*cts_it, buffer, sizeof(buffer), 0); // Needed for connection issues
+    //int bytes_rcv = msg_manager.lastReadResult();
+
+    // if(bytes_csv == -1) {
+    //     std::cerr << "There was a connection issue" << std::endl;
+    //     return SRVERROR;
+    // }
+    // else if(bytes_rcv == 0) {
+    //     std::cout << "The client disconnected" << std::endl;
+    //     return SRVNOCONN;
+    // }
+
+    if(!msg_manager.assembleMsg(*cts_it)) return 4;//SRVERROR;      // Or not? I don't know what means "false". One time it's error and another it's more bytes?
     msg::Message msg = msg_manager.readMsg(*cts_it);
 
-    int bytes_rcv = msg_manager.lastReadResult();
-
-    if(bytes_rcv == -1) {
+    if(msg.type == msg::Message::Type::broken) {
         std::cerr << "There was a connection issue" << std::endl;
         return SRVERROR;
     }
-    if(bytes_rcv == 0) {
+    else if(msg.type == msg::Message::Type::disconnect_client) {
         std::cout << "The client disconnected" << std::endl;
         return SRVNOCONN;
     }
-    else{
+    else if(msg.type == msg::Message::Type::keep_alive) {
+        // Particularly nothing here now
+    }
+    else if(msg.type == msg::Message::Type::file_info) {
+        std::string message = "";
+        for(auto c : msg.buffer) message += c;
+        std::cout << message << std::endl;
+    }
+    else {
         std::cout << "Received: " << static_cast<int>(msg.type) << std::endl;
         std::cout << "Message: ";
         for(char c : msg.buffer) std::cout << c;
