@@ -210,9 +210,21 @@ int server::Server::read_srv(char* buffer) {
         // Particularly nothing here now
     }
     else if(msg.type == msg::Message::Type::file_info) {
-        std::string message = "";
+       /* std::string message = "";
         for(auto c : msg.buffer) message += c;
-        std::cout << message << std::endl;
+        std::cout << message << std::endl;*/
+        std::cout  << std::endl << "Message type: " << static_cast<int>(msg.type) << std::endl;
+
+        int place = 0;  //partyzantka, przydałby sie moduł który deserializuje bufor dla każdej wiadomości
+        int name_size = (msg.buffer[3] << 24) | (msg.buffer[2] << 16) | (msg.buffer[1] << 8) | (msg.buffer[0]);
+        place += 4;        
+
+        std::cout << "File info: " << std::string(msg.buffer.begin() + place, msg.buffer.begin() + place + name_size) << std::endl;
+        place += name_size;
+        int piece_number = (msg.buffer[place + 3] << 24) | (msg.buffer[place + 2] << 16) | (msg.buffer[place + 1] << 8) | (msg.buffer[place]);
+        std::cout << "Piece number: " << piece_number << std::endl;
+        place += 4;
+        std::cout << "Piece hash: " << std::string(msg.buffer.begin() + place, msg.buffer.end()) << std::endl;
     }
     else {
         std::cout << "Received: " << static_cast<int>(msg.type) << std::endl;
