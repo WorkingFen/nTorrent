@@ -55,53 +55,6 @@ Client::~Client()
 }
 
 
-void Client::prepareSockaddrStruct(struct sockaddr_in& x, const char ipAddr[15], const int& port)
-{
-    x.sin_family = AF_INET;
-    if( (inet_pton(AF_INET, ipAddr, &x.sin_addr)) <= 0)
-        throw std::invalid_argument("Improper IPv4 address: " + std::string(ipAddr));
-    x.sin_port = htons(port);
-}
-
- void Client::getUserCommands()
- {
-    if(FD_ISSET(0, &ready))
-    {
-        char buffer[4096];
-        fgets(buffer, 4096, stdin);
-        console->processCommands(buffer);        // exception?????
-    }
- }
-
-void Client::turnOff()
-{
-	pthread_kill(signal_thread.native_handle(), SIGINT);    // ubicie ewentualnego sigwaita
-    signal_thread.join();
-
-    int result;
-    for(auto it = clientSockets.begin(); it != clientSockets.end(); ++it){  // zamknięcie socketów
-		std::cout<<"Closing client socket ("<<*it<<")"<<std::endl;
-
-        result = close(*it);
-        if(result == -1){
-            std::cerr<<"Closing "<<*it<<" socket failed"<<std::endl;
-            continue;
-        }
-    }
-
-    for(auto it = serverSockets.begin(); it != serverSockets.end(); ++it){
-		std::cout<<"Closing server socket ("<<*it<<")"<<std::endl;
-
-        result = close(*it);
-
-        if(result == -1){
-            std::cerr<<"Closing "<<*it<<" socket failed"<<std::endl;
-            continue;
-        }
-        std::cout<<"losed "<<*it<<" server socket"<<std::endl;
-    }
-}
-
 void Client::connectTo(const struct sockaddr_in &address)
 {
     int sock = socket(AF_INET, SOCK_STREAM, 0);
@@ -119,6 +72,56 @@ void Client::connectTo(const struct sockaddr_in &address)
         clientSocketsNum++;
 }
 
+
+const struct sockaddr_in& Client::getServer() const
+{
+    return server;
+}
+
+
+void Client::setConsoleInterface(ConsoleInterfacePtr& x)
+{
+    console = std::move(x);
+}
+
+
+void Client::sendFileInfo(int socket, std::string directory, std::string fname)
+{
+    std::vector<std::string> hashes = hashPieces(directory + "/" + fname, pieceSize);    //fileDIRname instead of clientFiles
+    int i=0;
+    
+    for(std::string hash : hashes)
+    {
+        msg::Message fileinfo(310);
+
+        int name_size = fname.size();
+        const char* ns = static_cast<char*>( static_cast<void*>(&name_size) );
+        fileinfo.buffer.insert(fileinfo.buffer.end(), ns, ns + sizeof(int));    //name size
+
+        fileinfo.buffer.insert(fileinfo.buffer.end(), fname.begin(), fname.end());  //file name
+
+        const char* c = static_cast<char*>( static_cast<void*>(&i) );
+        fileinfo.buffer.insert(fileinfo.buffer.end(), c, c + sizeof(int));  //piece number
+
+        fileinfo.buffer.insert(fileinfo.buffer.end(), hash.begin(), hash.end());    //hash for that piece
+
+        fileinfo.buf_length = fileinfo.buffer.size();
+
+        fileinfo.sendMessage(socket);   //nalezy wyroznic jakos socket przez ktory komunikujemy sie z serwerem
+
+        ++i;
+    }    
+}
+
+
+void Client::sendFilesInfo()
+{
+    std::vector<std::string> file_names = std::move(console->getDirFiles());
+
+    for(std::string fname : file_names) sendFileInfo(*clientSockets.begin(), "clientFiles", fname);
+}
+
+
 void Client::signal_waiter()
 {
 	int sig_number;
@@ -126,10 +129,11 @@ void Client::signal_waiter()
     sigwait (&signal_set, &sig_number);
     if (sig_number == SIGINT) 
 	{
-        std::cout<<"\rReceived SIGINT. Exiting..."<<std::endl;
+        std::cout<<"\rReceived SIGINT. Exiting..."<<std::endl;      // tylko do debugowania
         interrupted_flag = true;
 	}
 }
+
 
 void Client::setSigmask(){
 
@@ -139,6 +143,46 @@ void Client::setSigmask(){
     if (status != 0)
         std::cerr<<"Setting signal mask failed"<<std::endl;
 }
+
+
+void Client::prepareSockaddrStruct(struct sockaddr_in& x, const char ipAddr[15], const int& port)
+{
+    x.sin_family = AF_INET;
+    if( (inet_pton(AF_INET, ipAddr, &x.sin_addr)) <= 0)
+        throw std::invalid_argument("Improper IPv4 address: " + std::string(ipAddr));
+    x.sin_port = htons(port);
+}
+
+
+void Client::getUserCommands()
+ {
+    if(FD_ISSET(0, &ready))
+    {
+        char buffer[4096];
+        fgets(buffer, 4096, stdin);
+        console->processCommands(buffer);        // exception?????
+    }
+ }
+
+
+void Client::handleCommands()
+{
+    try
+    {
+        console->handleInput();          // aby nie zezwolić wątkowi na próbę wypisania menu
+
+        if(console->getState() == State::down)
+            endFlag=1;
+
+    }
+    catch(std::exception& e) 
+    { 
+        std::cerr << e.what() << std::endl; 
+        endFlag=1;  
+        run_stop_flag=1;
+    }
+}
+
 
 void Client::handleMessages()
 {
@@ -169,58 +213,36 @@ void Client::handleMessages()
     }
 }
 
-void Client::handleCommands()
+
+void Client::turnOff()
 {
-    try
-    {
-        console->handleInput();          // aby nie zezwolić wątkowi na próbę wypisania menu
+	pthread_kill(signal_thread.native_handle(), SIGINT);    // ubicie ewentualnego sigwaita
+    signal_thread.join();
 
-        if(console->getState() == State::down)
-            endFlag=1;
+    int result;
+    for(auto it = clientSockets.begin(); it != clientSockets.end(); ++it){  // zamknięcie socketów
+		std::cout<<"Closing client socket ("<<*it<<")"<<std::endl;
 
+        result = close(*it);
+        if(result == -1){
+            std::cerr<<"Closing "<<*it<<" socket failed"<<std::endl;
+            continue;
+        }
     }
-    catch(std::exception& e) 
-    { 
-        std::cerr << e.what() << std::endl; 
-        endFlag=1;  
-        run_stop_flag=1;
+
+    for(auto it = serverSockets.begin(); it != serverSockets.end(); ++it){
+		std::cout<<"Closing server socket ("<<*it<<")"<<std::endl;
+
+        result = close(*it);
+
+        if(result == -1){
+            std::cerr<<"Closing "<<*it<<" socket failed"<<std::endl;
+            continue;
+        }
+        std::cout<<"losed "<<*it<<" server socket"<<std::endl;
     }
 }
 
-void Client::sendFileInfo(int socket, std::string directory, std::string fname)
-{
-    std::vector<std::string> hashes = hashPieces(directory + "/" + fname, pieceSize);    //fileDIRname instead of clientFiles
-    int i=0;
-    
-    for(std::string hash : hashes)
-    {
-        msg::Message fileinfo(310);
-
-        int name_size = fname.size();
-        const char* ns = static_cast<char*>( static_cast<void*>(&name_size) );
-        fileinfo.buffer.insert(fileinfo.buffer.end(), ns, ns + sizeof(int));    //name size
-
-        fileinfo.buffer.insert(fileinfo.buffer.end(), fname.begin(), fname.end());  //file name
-
-        const char* c = static_cast<char*>( static_cast<void*>(&i) );
-        fileinfo.buffer.insert(fileinfo.buffer.end(), c, c + sizeof(int));  //piece number
-
-        fileinfo.buffer.insert(fileinfo.buffer.end(), hash.begin(), hash.end());    //hash for that piece
-
-        fileinfo.buf_length = fileinfo.buffer.size();
-
-        fileinfo.sendMessage(socket);   //nalezy wyroznic jakos socket przez ktory komunikujemy sie z serwerem
-
-        ++i;
-    }    
-}
-
-void Client::sendFilesInfo()
-{
-    std::vector<std::string> file_names = std::move(console->getDirFiles());
-
-    for(std::string fname : file_names) sendFileInfo(*clientSockets.begin(), "clientFiles", fname);
-}
 
 void Client::run()
 {
@@ -260,16 +282,8 @@ void Client::run()
         getUserCommands();
         handleCommands();
     }
-
         turnOff();
 }
 
-const struct sockaddr_in& Client::getServer() const
-{
-    return server;
-}
 
-void Client::setConsoleInterface(ConsoleInterfacePtr& x)
-{
-    console = std::move(x);
-}
+

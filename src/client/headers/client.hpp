@@ -35,31 +35,37 @@ class Client
         msg::MessageManager msg_manager;
         ConsoleInterfacePtr console;
     
-        void signal_waiter();					// obsługa siginta na fredach
-        void setSigmask();
         std::thread signal_thread;              
         sigset_t signal_set;					// do ustawienia sigmask
         bool interrupted_flag = false;			// sygnalizuje użycie Ctrl+C
         bool run_stop_flag = false;             // koniec pętli run
 
-        void prepareSockaddrStruct(struct sockaddr_in& x, const char ipAddr[15], const int& port);
+        void signal_waiter();					// obsługa siginta na fredach
+        
+        void setSigmask();
+        void prepareSockaddrStruct(struct sockaddr_in& x, const char ipAddr[15], const int& port);  
+        void handleMessages();
         void getUserCommands();
+        void handleCommands();
+        void turnOff();                                               // metoda kończąca wszystkie połączenia
+
 
     public:
         Client(const char ipAddr[15], const int& port, const char serverIpAddr[15], const int& serverPort=2200);         // tworzy socketa, który będzie nasłuchiwał
         ~Client();
-        void connectTo(const struct sockaddr_in &server);             // łączy się z klientem o podanym adresie (serwer powinien przesyłać gotową strukturę do klienta) lub z serwerem torrent
-        void turnOff();                                         // metoda kończąca wszystkie połączenia
-        void handleMessages();
-        void handleCommands();
-        void run();                                                // pętla z selectem
 
-        void registerSignalHandler(void (*handler)(int));
+        void connectTo(const struct sockaddr_in &server);             // łączy się z klientem o podanym adresie (serwer powinien przesyłać gotową strukturę do klienta) lub z serwerem torrent
+
         const struct sockaddr_in& getServer() const;
         void setConsoleInterface(ConsoleInterfacePtr& x);
 
         void sendFileInfo(int socket, std::string directory, std::string filename);
         void sendFilesInfo();
+
+        void run();                                                   // pętla z selectem
+
+
+
 };
 
 #endif
