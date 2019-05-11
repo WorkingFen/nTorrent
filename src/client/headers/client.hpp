@@ -10,8 +10,6 @@
 #include <iostream>
 #include <signal.h>
 #include <thread>
-#include <mutex>
-#include <condition_variable>
 #include <memory>
 #include "consoleInterface.hpp"
 #include "../../message/message.hpp"
@@ -34,10 +32,6 @@ class Client
         std::list<int> serverSockets;                             // lista z socketami pełniącymi role seederów/peerów    
 
         std::thread input;
-        std::mutex commandLock, inputLock;// = PTHREAD_MUTEX_INITIALIZER;
-        std::condition_variable condition;
-        int command = 0;
-        void input_thread();
         msg::MessageManager msg_manager;
         ConsoleInterfacePtr console;
     
@@ -49,6 +43,7 @@ class Client
         bool run_stop_flag = false;             // koniec pętli run
 
         void prepareSockaddrStruct(struct sockaddr_in& x, const char ipAddr[15], const int& port);
+        void getUserCommands();
 
     public:
         Client(const char ipAddr[15], const int& port, const char serverIpAddr[15], const int& serverPort=2200);         // tworzy socketa, który będzie nasłuchiwał

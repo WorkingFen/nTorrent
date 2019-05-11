@@ -54,35 +54,6 @@ Client::~Client()
     std::cout << "Disconnected" << std::endl;  
 }
 
-void Client::input_thread()
-{
-    std::string input;
-    std::unique_lock<std::mutex> lock(inputLock);
-    while(!interrupted_flag && console->getState() != State::down )
-    {
-        condition.wait(lock);
-
-        if(endFlag==0)
-        {
-            console->printMenu();
-        }
-        else
-        {
-            break;
-        }
-        
-        std::cin>>input;
-        //pthread_mutex_lock(&input_lock);
-        commandLock.lock();
-
-        try{
-            command = std::stoi(input);
-        } catch(std::exception& e) { command=-1;}       // -1 dla inputHandler
-        commandLock.unlock();
-        //pthread_mutex_unlock(&input_lock);
-    }
-    std::cout << "input end" << std::endl;
-}
 
 void Client::prepareSockaddrStruct(struct sockaddr_in& x, const char ipAddr[15], const int& port)
 {
@@ -91,6 +62,16 @@ void Client::prepareSockaddrStruct(struct sockaddr_in& x, const char ipAddr[15],
         throw std::invalid_argument("Improper IPv4 address: " + std::string(ipAddr));
     x.sin_port = htons(port);
 }
+
+ void Client::getUserCommands()
+ {
+    if(FD_ISSET(0, &ready))
+    {
+        char buffer[4096];
+        fgets(buffer, 4096, stdin);
+        console->processCommands(buffer);        // exception?????
+    }
+ }
 
 void Client::turnOff()
 {
@@ -188,33 +169,20 @@ void Client::handleMessages()
 
 void Client::handleCommands()
 {
-    commandLock.lock();
-
-    if(command != 0)
+    try
     {
-        try
-        {
-            if(command == 99) msg::Message(404,"Hello world!",13).sendMessage(*clientSockets.begin());  //test
+        console->handleInput();          // aby nie zezwolić wątkowi na próbę wypisania menu
 
-            int input_value = command;      // wartość przekazywana do inputHandler w consoleInterface
-            command = 0;
-            console->handleInput(input_value);          // aby nie zezwolić wątkowi na próbę wypisania menu
+        if(console->getState() == State::down)
+            endFlag=1;
 
-            if(console->getState() == State::down)
-                endFlag=1;
-
-            condition.notify_one();
-        }
-        catch(std::exception& e) 
-        { 
-            std::cerr << e.what() << std::endl; 
-            endFlag=1; 
-            condition.notify_one(); 
-            run_stop_flag=1;
-        }
     }
-
-    commandLock.unlock();  
+    catch(std::exception& e) 
+    { 
+        std::cerr << e.what() << std::endl; 
+        endFlag=1;  
+        run_stop_flag=1;
+    }
 }
 
 void Client::sendFileInfo(int socket, std::string directory, std::string fname)
@@ -257,14 +225,12 @@ void Client::run()
     setSigmask();       // Set sigmask for all threads
     signal_thread = std::thread(&Client::signal_waiter, this);        // Create the sigwait thread
 
-    input = std::thread(&Client::input_thread, this);
-    sleep(1);
-    condition.notify_one(); 
-
     while(!interrupted_flag && !run_stop_flag && console->getState() != State::down)
     {
 
         FD_ZERO(&ready);
+
+        FD_SET(0, &ready);
         FD_SET(sockFd, &ready);
 
         for(const int &i : clientSockets)
@@ -289,13 +255,13 @@ void Client::run()
         }
 
         handleMessages();
+        getUserCommands();
         handleCommands();
     }
 
 	pthread_cancel(signal_thread.native_handle());
     signal_thread.join();
     pthread_cancel(input.native_handle());
-    input.join();
     turnOff();
 }
 

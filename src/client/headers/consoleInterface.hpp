@@ -7,6 +7,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <vector>
+#include <queue>
 
 enum class State      // stan, w jakim znajduje się użytkownik (determinuje obsługę i/o)
 {
@@ -26,8 +27,12 @@ class ConsoleInterface
     char fileDirName[1000];
     DIR *fileDir;
     State state;
+    std::vector<char> buffer;
+    std::queue<std::string> commandQueue;
 
     void printFolderContent();
+    void handleInputUp();
+    void handleInputConnected();
 
     public:
     ConsoleInterface(Client& c);
@@ -36,11 +41,8 @@ class ConsoleInterface
     void setDir();
     std::vector<std::string> getDirFiles();
     void calculateHashes();
-    void printMenu();
-    void printConnected();
-    void handleInput(int input);
-    void handleInputUp(int input);
-    void handleInputConnected(int connected);
+    void processCommands(const char* buf);
+    void handleInput();
 
     void stopSeeding();
     void stopLeeching();

@@ -21,83 +21,46 @@ ConsoleInterface::~ConsoleInterface()
     closedir(fileDir);
 }
 
-void ConsoleInterface::printConnected()
+void ConsoleInterface::printFolderContent()
 {
-    cout<<"Menu:"<<endl
-        <<"Aktualny stan: połączony"<<endl
-        <<"1. Wyświetl zawartość katalogu"<<endl
-        <<"2. Pobierz plik"<<endl
-        <<"3. Uaktualnij stan plików"<<endl;
-}
-
-void ConsoleInterface::printMenu()
-{
-    switch(state){
-        case State::up:
-            cout<<"Menu:"<<endl
-                <<"Aktualny stan: niepołączony"<<endl
-                <<"1. Połącz z serwerem"<<endl;
-            break;
-
-        case State::connected:
-            printConnected();
-            break;
-
-        case State::seeding:
-            printConnected();
-            cout<<"4. Zakończ udostępniać plik"<<endl;
-            break;
-
-        case State::leeching:
-            printConnected();
-            cout<<"4. Zakończ pobierać plik"<<endl;
-            break;
-
-        case State::both:
-            printConnected();
-            cout<<"4. Zakończ pobierać plik"<<endl
-                <<"5. Zakończ udostępniać plik"<<endl;
-            break;
-
-        case State::down:
-            return;
-
-        default:
-            cout<<"Menu error"<<endl;
-            return;
+    struct dirent *x;
+    int i=1;
+    cout << endl << "ZAWARTOSC KATALOGU:" << endl; 
+    while( (x=readdir(fileDir)) != NULL )
+    {
+        if(strcmp(x->d_name, ".")!=0 && strcmp(x->d_name, "..")!=0)
+        {
+            cout << i << ". " << x->d_name << endl;
+            i++;
+        }
     }
-
-    cout<<"9. Zakończ program"<<endl;
-    cout<<"Wprowadź numer opcji: ";
-
+    cout << endl;
+    rewinddir(fileDir);
 }
 
-void ConsoleInterface::handleInput(int input){
-    //std::system("clear");
-    
-    if(state == State::up)  handleInputUp(input);
-    else if(state == State::connected || state == State::seeding || state == State::seeding || state == State::both) handleInputConnected(input); // prawie takie same
-    else return;
-
-}
-
-void ConsoleInterface::handleInputUp(int input){
-    switch(input){
-        case 1:
-                client.connectTo(client.getServer());
-                //calculateHashes();
-                client.sendFilesInfo();
-                state = State::connected;
-                break;
-                
-        case 9:
-                state = State::down;
-                break;
-
-        default:
-                //TODO
-                break;
-
+void ConsoleInterface::handleInputUp(){
+    std::string input=commandQueue.front();
+    commandQueue.pop();
+    if(input == "help")
+    {
+        cout << "Lista komend:" << endl
+        << "help - wypisz liste dostepnych komend" << endl
+        << "connect - polacz z serwerem" << endl
+        << "ls - pokaz zawartosc katalogu z plikami, ktore udostepniasz (wymagane polaczenie z serwerem)" << endl
+        << "disconnect - rozlacz sie z serwerem" << endl
+        << "quit - wylacz program" << endl;
+    }   else if(input == "connect")
+    {
+        client.connectTo(client.getServer());
+        //calculateHashes();
+        client.sendFilesInfo();
+        state = State::connected;
+    }   else if (input == "quit")
+    {
+        state = State::down;
+    }   else
+    {
+        cout << "Nieprawidlowa komenda!" << endl;
     }
 }
 /*
@@ -108,7 +71,31 @@ void ConsoleInterface::handleInputUp(int input){
     5. Zakończ udostępniać plik
 
 */
-void ConsoleInterface::handleInputConnected(int input){
+void ConsoleInterface::handleInputConnected(){
+    std::string input=commandQueue.front();
+    commandQueue.pop();
+    if(input == "help")
+    {
+        cout << "Lista komend:" << endl
+        << "help - wypisz liste dostepnych komend" << endl
+        << "connect - polacz z serwerem" << endl
+        << "ls - pokaz zawartosc katalogu z plikami, ktore udostepniasz (wymagane polaczenie z serwerem)" << endl
+        << "disconnect - rozlacz sie z serwerem" << endl
+        << "quit - wylacz program" << endl;
+    }   else if(input == "connect")
+    {
+        cout << "Jestes juz polaczony!" << endl;
+    }   else if(input == "ls")
+    {
+        printFolderContent();
+    }   else if (input == "quit")
+    {
+        state = State::down;
+    }   else
+    {
+        cout << "Nieprawidlowa komenda!" << endl;
+    }
+/*
     switch(input){
         case 1:
                 printFolderContent();
@@ -138,37 +125,7 @@ void ConsoleInterface::handleInputConnected(int input){
                 break;
 
     }
-}
-
-void ConsoleInterface::stopSeeding()
-{
-    //TODO
-}
-
-void ConsoleInterface::stopLeeching()
-{
-    //TODO
-}
-
-State ConsoleInterface::getState(){
-    return state;
-}
-
-void ConsoleInterface::printFolderContent()
-{
-    struct dirent *x;
-    int i=1;
-    cout << endl << "ZAWARTOSC KATALOGU:" << endl; 
-    while( (x=readdir(fileDir)) != NULL )
-    {
-        if(strcmp(x->d_name, ".")!=0 && strcmp(x->d_name, "..")!=0)
-        {
-            cout << i << ". " << x->d_name << endl;
-            i++;
-        }
-    }
-    cout << endl;
-    rewinddir(fileDir);
+*/
 }
 
 vector<string> ConsoleInterface::getDirFiles(){
@@ -196,4 +153,44 @@ void ConsoleInterface::calculateHashes(){
 
         hashes.push_back(hashPieces(path, 10));
     }
+}
+
+void ConsoleInterface::processCommands(const char* buf)
+{
+    buffer.insert(buffer.end(), buf, buf+strlen(buf));
+    for(auto it = buffer.begin(); it!=buffer.end();)
+    {
+        if(*it==10)
+        {
+            commandQueue.emplace(std::string(buffer.begin(), it));
+            it=buffer.erase(buffer.begin(), it+1);
+        }
+        else
+        {
+            ++it;
+        } 
+    }
+}
+
+void ConsoleInterface::handleInput()
+{
+    if(!commandQueue.empty())
+    {
+        if(state == State::up)  handleInputUp();
+        else if(state == State::connected || state == State::seeding || state == State::seeding || state == State::both) handleInputConnected(); // prawie takie same
+    }
+}
+
+void ConsoleInterface::stopSeeding()
+{
+    //TODO
+}
+
+void ConsoleInterface::stopLeeching()
+{
+    //TODO
+}
+
+State ConsoleInterface::getState(){
+    return state;
 }
