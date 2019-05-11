@@ -75,9 +75,11 @@ void Client::prepareSockaddrStruct(struct sockaddr_in& x, const char ipAddr[15],
 
 void Client::turnOff()
 {
-    int result;
+	pthread_kill(signal_thread.native_handle(), SIGINT);    // ubicie ewentualnego sigwaita
+    signal_thread.join();
 
-    for(auto it = clientSockets.begin(); it != clientSockets.end(); ++it){
+    int result;
+    for(auto it = clientSockets.begin(); it != clientSockets.end(); ++it){  // zamknięcie socketów
 		std::cout<<"Closing client socket ("<<*it<<")"<<std::endl;
 
         result = close(*it);
@@ -259,10 +261,7 @@ void Client::run()
         handleCommands();
     }
 
-	pthread_cancel(signal_thread.native_handle());
-    signal_thread.join();
-    pthread_cancel(input.native_handle());
-    turnOff();
+        turnOff();
 }
 
 const struct sockaddr_in& Client::getServer() const
