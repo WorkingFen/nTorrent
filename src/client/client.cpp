@@ -8,7 +8,7 @@
 
 using namespace msg;
 
-Client::Client(const char ipAddr[15], const int& port, const char serverIpAddr[15], const int& serverPort) : clientSocketsNum(0), serverSocketsNum(0), maxFd(0), endFlag(0)
+Client::Client(const char ipAddr[15], const int& port, const char serverIpAddr[15], const int& serverPort) : clientSocketsNum(0), serverSocketsNum(0), maxFd(0)
 {
     prepareSockaddrStruct(self, ipAddr, port);
     prepareSockaddrStruct(server, serverIpAddr, serverPort);
@@ -170,15 +170,10 @@ void Client::handleCommands()
     try
     {
         console->handleInput();          // aby nie zezwolić wątkowi na próbę wypisania menu
-
-        if(console->getState() == State::down)
-            endFlag=1;
-
     }
     catch(std::exception& e) 
     { 
-        std::cerr << e.what() << std::endl; 
-        endFlag=1;  
+        std::cerr << e.what() << std::endl;   
         run_stop_flag=1;
     }
 }
@@ -243,6 +238,19 @@ void Client::turnOff()
     }
 }
 
+void Client::setFileDescrMask()
+{
+    FD_ZERO(&ready);
+
+    FD_SET(0, &ready);
+    FD_SET(sockFd, &ready);
+
+    for(const int &i : clientSockets)
+        FD_SET(i, &ready);
+
+    for(const int &i : serverSockets)
+        FD_SET(i, &ready);
+}
 
 void Client::run()
 {
@@ -251,18 +259,8 @@ void Client::run()
 
     while(!interrupted_flag && !run_stop_flag && console->getState() != State::down)
     {
-
-        FD_ZERO(&ready);
-
-        FD_SET(0, &ready);
-        FD_SET(sockFd, &ready);
-
-        for(const int &i : clientSockets)
-            FD_SET(i, &ready);
-
-        for(const int &i : serverSockets)
-            FD_SET(i, &ready); 
-
+        setFileDescrMask();
+        
         to.tv_sec = 1;
         to.tv_usec = 0;
 

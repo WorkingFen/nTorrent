@@ -24,7 +24,6 @@ class Client
         static const int pieceSize = 10;
 
         int sockFd, port, clientSocketsNum, serverSocketsNum, maxFd;        // listen socket; przydzielony port efemeryczny; liczba socketów pobierających/wysyłających dane (nie licząc komunikacji z serwerem)
-        int endFlag;                            // sygnalizuje, że użytkownik wybrał opcję zakończenia programu lub wystąpił wyjątek przy inputHandler 
         struct sockaddr_in self, server;
         fd_set ready;
         struct timeval to;
@@ -48,6 +47,7 @@ class Client
         void getUserCommands();
         void handleCommands();
         void turnOff();                                               // metoda kończąca wszystkie połączenia
+        void setFileDescrMask();                                      // metoda ustawiająca maskę deskryptorów plików
 
 
     public:

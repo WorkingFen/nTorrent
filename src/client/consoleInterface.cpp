@@ -60,7 +60,7 @@ void ConsoleInterface::handleInputUp(){
         state = State::down;
     }   else
     {
-        cout << "Nieprawidlowa komenda!" << endl;
+        cout << "Nieprawidlowa komenda! Wpisz 'help', aby zobaczyc liste komend." << endl;
     }
 }
 /*
@@ -93,7 +93,7 @@ void ConsoleInterface::handleInputConnected(){
         state = State::down;
     }   else
     {
-        cout << "Nieprawidlowa komenda!" << endl;
+        cout << "Nieprawidlowa komenda! Wpisz 'help', aby zobaczyc liste komend." << endl;
     }
 /*
     switch(input){
