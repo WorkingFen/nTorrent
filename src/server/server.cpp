@@ -201,36 +201,29 @@ int server::Server::read_srv(char* buffer) {
     if(!msg_manager.assembleMsg(*cts_it)) return 4;//SRVERROR;      // Or not? I don't know what means "false". One time it's error and another it's more bytes?
     msg::Message msg = msg_manager.readMsg(*cts_it);
 
-    if(msg.type == msg::Message::Type::broken) {
+    if(msg.type == -1) {
         std::cerr << "There was a connection issue" << std::endl;
         return SRVERROR;
     }
-    else if(msg.type == msg::Message::Type::disconnect_client) {
+    else if(msg.type == 111) {
         std::cout << "The client disconnected" << std::endl;
         return SRVNOCONN;
     }
-    else if(msg.type == msg::Message::Type::keep_alive) {
+    else if(msg.type == 110) {
         // Particularly nothing here now
     }
-    else if(msg.type == msg::Message::Type::file_info) {
-       /* std::string message = "";
-        for(auto c : msg.buffer) message += c;
-        std::cout << message << std::endl;*/
-        std::cout  << std::endl << "Message type: " << static_cast<int>(msg.type) << std::endl;
+    else if(msg.type == 105) {
 
-        int place = 0;  //partyzantka, przydałby sie moduł który deserializuje bufor dla każdej wiadomości
-        int name_size = (msg.buffer[3] << 24) | (msg.buffer[2] << 16) | (msg.buffer[1] << 8) | (msg.buffer[0]);
-        place += 4;        
+        std::cout << std::endl << "Message type: " << msg.type << std::endl;
 
-        std::cout << "File info: " << std::string(msg.buffer.begin() + place, msg.buffer.begin() + place + name_size) << std::endl;
-        place += name_size;
-        int piece_number = (msg.buffer[place + 3] << 24) | (msg.buffer[place + 2] << 16) | (msg.buffer[place + 1] << 8) | (msg.buffer[place]);
-        std::cout << "Piece number: " << piece_number << std::endl;
-        place += 4;
-        std::cout << "Piece hash: " << std::string(msg.buffer.begin() + place, msg.buffer.end()) << std::endl;
+        int name_size = msg.readInt();     
+
+        std::cout << "File info: " << msg.readString(name_size) << std::endl;
+        std::cout << "Piece number: " << msg.readInt() << std::endl;
+        std::cout << "Piece hash: " << msg.readString(64) << std::endl;
     }
     else {
-        std::cout << "Received: " << static_cast<int>(msg.type) << std::endl;
+        std::cout << "Received: " << msg.type << std::endl;
         std::cout << "Message: ";
         for(char c : msg.buffer) std::cout << c;
         std::cout << std::endl;

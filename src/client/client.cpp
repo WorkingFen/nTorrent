@@ -92,20 +92,13 @@ void Client::sendFileInfo(int socket, std::string directory, std::string fname)
     
     for(std::string hash : hashes)
     {
-        msg::Message fileinfo(310);
+        msg::Message fileinfo(105);
 
-        int name_size = fname.size();
-        const char* ns = static_cast<char*>( static_cast<void*>(&name_size) );
-        fileinfo.buffer.insert(fileinfo.buffer.end(), ns, ns + sizeof(int));    //name size
+        fileinfo.writeInt(fname.size());    //name size
+        fileinfo.writeString(fname);        //file name
 
-        fileinfo.buffer.insert(fileinfo.buffer.end(), fname.begin(), fname.end());  //file name
-
-        const char* c = static_cast<char*>( static_cast<void*>(&i) );
-        fileinfo.buffer.insert(fileinfo.buffer.end(), c, c + sizeof(int));  //piece number
-
-        fileinfo.buffer.insert(fileinfo.buffer.end(), hash.begin(), hash.end());    //hash for that piece
-
-        fileinfo.buf_length = fileinfo.buffer.size();
+        fileinfo.writeInt(i);               //piece number
+        fileinfo.writeString(hash);         //hash for that piece
 
         fileinfo.sendMessage(socket);   //nalezy wyroznic jakos socket przez ktory komunikujemy sie z serwerem
 
@@ -188,7 +181,7 @@ void Client::handleMessages()
             msg::Message msg = msg_manager.readMsg(*it);
 
             std::cout << (int) msg.type << std::endl;
-            if(msg.type == msg::Message::Type::disconnect_client)                                // tu msg
+            if(msg.type == 211)                                // tu msg
             {
                 close(*it);
                 it = serverSockets.erase(it);

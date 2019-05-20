@@ -13,34 +13,51 @@
 
 namespace msg
 {
+    
 struct Message
 {
     enum class Type : int
     {
-        disconnect_client = 100,
-        keep_alive = 210,
+        share_file,
+        list_files,
+        delete_block,
+        ask_for_file,
+        have_block,
+        ask_for_block,
+        bad_block_hash,
+        keep_alive,
+        client_disconnected,
 
-        file_info = 310,
+        file_info,
+        block_info,
+        server_out,
 
-        broken = -1,
+        file_block,
+
+        get_file,
+
+        broken,
     };
 
-    Type type = Type::broken;
+    static const std::map<int, Type> type_map;
+
+    int type = -1;
     int buf_length = 0;
     std::vector<char> buffer;
 
+    Type getType(int t) const;
+
     int sendMessage(int dst_socket);
 
+    int readInt();
+    std::string readString(int length);
+    void writeInt(int i);
+    void writeString(std::string s);
+
     Message() {}
-    Message(Type t): type(t) {}
-    Message(int t): type(static_cast<Type>(t)) {}
+    Message(int t): type(t) {}
 
-    Message(int t, char* b, int bl): type(static_cast<Type>(t)), buf_length(bl)
-    {
-        buffer = std::vector<char>(b, b+bl);
-    }
-
-    Message(Type t, char* b, int bl): type(t), buf_length(bl)
+    Message(int t, char* b, int bl): type(t), buf_length(bl)
     {
         buffer = std::vector<char>(b, b+bl);
     }
@@ -55,6 +72,7 @@ class MessageManager
         int read_result;
 
         bool isMsgHeaderReady(int socket);
+        //verify msg type after header has been received
         size_t expectedMsgSize(int socket);
         size_t remainingMsgSize(int socket);
 
