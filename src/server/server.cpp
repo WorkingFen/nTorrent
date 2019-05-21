@@ -197,7 +197,7 @@ int server::Server::read_srv(char* buffer) {
     //     std::cout << "The client disconnected" << std::endl;
     //     return SRVNOCONN;
     // }
-    if(!msg_manager.assembleMsg(*cts_it)) 
+    if(!msg_manager.assembleMsg(*cts_it))
         return msg_manager.lastReadResult();//SRVERROR;      // Or not? I don't know what means "false". One time it's error and another it's more bytes?
 
     msg::Message msg = msg_manager.readMsg(*cts_it);
@@ -212,6 +212,17 @@ int server::Server::read_srv(char* buffer) {
     }
     else if(msg.type == 110) {
         std::cout << std::endl << "Keep alive socket number " << *cts_it << std::endl;
+    }
+    else if(msg.type == 101) {
+
+        std::cout << std::endl << "Message type: " << msg.type << std::endl;
+
+        int name_size = msg.readInt();     
+
+        std::cout << "File name: " << msg.readString(name_size) << std::endl;
+        std::cout << "File size: " << msg.readInt() << std::endl;
+        while(msg.buf_length > 0)
+            std::cout << "Piece hash: " << msg.readString(64) << std::endl;
     }
     else if(msg.type == 105) {
 

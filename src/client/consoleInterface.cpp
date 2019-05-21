@@ -53,7 +53,7 @@ void ConsoleInterface::handleInputUp(){
     {
         client.connectTo(client.getServer());
         //calculateHashes();
-        client.sendFilesInfo();
+        client.shareFiles();
         state = State::connected;
     }   else if (input == "quit")
     {

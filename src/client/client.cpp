@@ -72,7 +72,7 @@ void Client::connectTo(const struct sockaddr_in &address)
         clientSockets.push_back(sock);              // TODO obsługa błędów
     }
 
-    maxFd = std::max(maxFd,sock+1);      
+    maxFd = std::max(maxFd,sock+1);    
 }
 
 const struct sockaddr_in& Client::getServer() const
@@ -83,35 +83,6 @@ const struct sockaddr_in& Client::getServer() const
 void Client::setConsoleInterface(ConsoleInterfacePtr& x)
 {
     console = std::move(x);
-}
-
-void Client::sendFileInfo(int socket, std::string directory, std::string fname)
-{
-    std::vector<std::string> hashes = hashPieces(directory + "/" + fname, pieceSize);    //fileDIRname instead of clientFiles
-    int i=0;
-    
-    for(std::string hash : hashes)
-    {
-        msg::Message fileinfo(105);
-
-        fileinfo.writeInt(fname.size());    //name size
-        fileinfo.writeString(fname);        //file name
-
-        fileinfo.writeInt(i);               //piece number
-        fileinfo.writeString(hash);         //hash for that piece
-
-        fileinfo.sendMessage(socket);   //nalezy wyroznic jakos socket przez ktory komunikujemy sie z serwerem
-
-        ++i;
-    }    
-}
-
-
-void Client::sendFilesInfo()
-{
-    std::vector<std::string> file_names = std::move(console->getDirFiles());
-
-    for(std::string fname : file_names) sendFileInfo(mainServerSocket, "clientFiles", fname);
 }
 
 void Client::signal_waiter()
@@ -198,7 +169,7 @@ void Client::handleMessages()
         {
             msg::Message msg = msg_manager.readMsg(*it);
 
-            std::cout << (int) msg.type << std::endl;
+            std::cout << msg.type << std::endl;
             if(msg.type == 111)                                // tu msg
             {
                 close(*it);
@@ -219,6 +190,57 @@ void Client::handleMessages()
     }
 }
 
+void Client::shareFile(int socket, std::string directory, std::string fname)
+{
+    std::vector<std::string> hashes = hashPieces(directory + "/" + fname, pieceSize);    //fileDIRname instead of clientFiles
+    
+    msg::Message share_msg(101);
+
+    share_msg.writeInt(fname.size());    //name size
+    share_msg.writeString(fname);        //file name
+
+    share_msg.writeInt(999);    //pleceholder for file size
+
+    for(std::string hash : hashes)
+        share_msg.writeString(hash);         //hash for that piece
+
+    share_msg.sendMessage(socket);
+}
+
+void Client::shareFiles()
+{
+    std::vector<std::string> file_names = std::move(console->getDirFiles());
+
+    for(std::string fname : file_names) shareFile(mainServerSocket, "clientFiles", fname);
+}
+
+void Client::sendFileInfo(int socket, std::string directory, std::string fname)
+{
+    std::vector<std::string> hashes = hashPieces(directory + "/" + fname, pieceSize);    //fileDIRname instead of clientFiles
+    int i=0;
+    
+    for(std::string hash : hashes)
+    {
+        msg::Message fileinfo(105);
+
+        fileinfo.writeInt(fname.size());    //name size
+        fileinfo.writeString(fname);        //file name
+
+        fileinfo.writeInt(i);               //piece number
+        fileinfo.writeString(hash);         //hash for that piece
+
+        fileinfo.sendMessage(socket);   //nalezy wyroznic jakos socket przez ktory komunikujemy sie z serwerem
+
+        ++i;
+    }    
+}
+
+void Client::sendFilesInfo()
+{
+    std::vector<std::string> file_names = std::move(console->getDirFiles());
+
+    for(std::string fname : file_names) sendFileInfo(mainServerSocket, "clientFiles", fname);
+}
 
 void Client::turnOff()
 {
