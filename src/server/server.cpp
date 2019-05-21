@@ -36,7 +36,7 @@ void server::Server::shutdown() {
 }
 
 void server::Server::add_file(std::string name) {
-
+    files.push_back(file());
 }
 
 void server::Server::add_block(int no, int hash) {
