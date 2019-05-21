@@ -27,6 +27,8 @@ class Client
         struct sockaddr_in self, server;
         fd_set ready;
         struct timeval to;
+
+        int mainServerSocket = -1;
         std::list<int> clientSockets;                             // lista z socketami pełniącymi role leechów/peerów
         std::list<int> serverSockets;                             // lista z socketami pełniącymi role seederów/peerów    
 
@@ -42,13 +44,15 @@ class Client
         void signal_waiter();					// obsługa siginta na fredach
         
         void setSigmask();
-        void prepareSockaddrStruct(struct sockaddr_in& x, const char ipAddr[15], const int& port);  
+        void prepareSockaddrStruct(struct sockaddr_in& x, const char ipAddr[15], const int& port);
+
+        void handleMessagesfromServer(); 
         void handleMessages();
         void getUserCommands();
         void handleCommands();
+        
         void turnOff();                                               // metoda kończąca wszystkie połączenia
         void setFileDescrMask();                                      // metoda ustawiająca maskę deskryptorów plików
-
 
     public:
         Client(const char ipAddr[15], const int& port, const char serverIpAddr[15], const int& serverPort=2200);         // tworzy socketa, który będzie nasłuchiwał

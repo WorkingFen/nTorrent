@@ -163,7 +163,7 @@ void server::Server::check_cts() {
     for(cts_it = clients_sockets.begin(); cts_it != clients_sockets.end(); ) {
         if(FD_ISSET(*cts_it, &bits_fd)) {
             int bytes_rcv = read_srv(msg_buf);
-            if(bytes_rcv == SRVERROR || bytes_rcv == SRVNOCONN) {
+            if(bytes_rcv == SRVERROR || bytes_rcv == SRVNOCONN || bytes_rcv == SRVNORM) {
                 close_ct();
                 continue;
             }
@@ -197,8 +197,9 @@ int server::Server::read_srv(char* buffer) {
     //     std::cout << "The client disconnected" << std::endl;
     //     return SRVNOCONN;
     // }
+    if(!msg_manager.assembleMsg(*cts_it)) 
+        return msg_manager.lastReadResult();//SRVERROR;      // Or not? I don't know what means "false". One time it's error and another it's more bytes?
 
-    if(!msg_manager.assembleMsg(*cts_it)) return 4;//SRVERROR;      // Or not? I don't know what means "false". One time it's error and another it's more bytes?
     msg::Message msg = msg_manager.readMsg(*cts_it);
 
     if(msg.type == -1) {
@@ -210,7 +211,7 @@ int server::Server::read_srv(char* buffer) {
         return SRVNOCONN;
     }
     else if(msg.type == 110) {
-        // Particularly nothing here now
+        std::cout << std::endl << "Keep alive socket number " << *cts_it << std::endl;
     }
     else if(msg.type == 105) {
 
