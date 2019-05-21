@@ -14,9 +14,6 @@
 #include <thread>
 #include <signal.h>
 #include "../../message/message.hpp"
-#include "../json/json.h"
-
-// #include <netinet/in.h>
 
 #define SRVNOCONN 404
 #define SRVNORM 0
@@ -52,11 +49,7 @@ namespace server {
             cts_list_it cts_it;         // Iterator of clients' list
             int max_fd;                 // Max file descriptor number
             timeval timeout;            // Timeout for select_ct()
-            fd_set bits_fd;             // Bits for file descriptors
-
-            // Json
-            // Json::Reader reader;
-            // Json::Value root; 
+            fd_set bits_fd;             // Bits for file descriptors 
 #ifdef CTNAME
             char host[NI_MAXHOST];
             char svc[NI_MAXSERV];
