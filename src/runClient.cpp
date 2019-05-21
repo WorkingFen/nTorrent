@@ -8,12 +8,12 @@ void sighand(int signum)
 }
 
 
-int main()
+int main(int argc, char* argv[])
 {
     // signal(SIGINT, sighand);
 
     try{
-        Client client("127.0.0.1", 0, "127.4.0.1", 2200);
+        Client client((argc < 2) ? "127.0.0.1" : argv[1], 0, "127.4.0.1", 2200);
         std::unique_ptr<ConsoleInterface> console(new ConsoleInterface(client));
         client.setConsoleInterface(console);
         client.run();
