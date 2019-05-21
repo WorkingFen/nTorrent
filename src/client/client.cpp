@@ -5,6 +5,7 @@
 #include <string.h>
 #include <algorithm>
 #include <string>
+#include <ctime>
 
 using namespace msg;
 
@@ -54,7 +55,6 @@ Client::~Client()
     std::cout << "Disconnected" << std::endl;  
 }
 
-
 void Client::connectTo(const struct sockaddr_in &address)
 {
     int sock = socket(AF_INET, SOCK_STREAM, 0);
@@ -64,26 +64,26 @@ void Client::connectTo(const struct sockaddr_in &address)
 
     std::cout << "Connected to sbd" << std::endl;
 
-    clientSockets.push_back(sock);              // TODO obsługa błędów
-
-    maxFd = std::max(maxFd,sock+1);
-
-    if(address.sin_addr.s_addr != server.sin_addr.s_addr)
+    if(address.sin_addr.s_addr == server.sin_addr.s_addr)
+        mainServerSocket = sock;
+    else 
+    {
         clientSocketsNum++;
-}
+        clientSockets.push_back(sock);              // TODO obsługa błędów
+    }
 
+    maxFd = std::max(maxFd,sock+1);      
+}
 
 const struct sockaddr_in& Client::getServer() const
 {
     return server;
 }
 
-
 void Client::setConsoleInterface(ConsoleInterfacePtr& x)
 {
     console = std::move(x);
 }
-
 
 void Client::sendFileInfo(int socket, std::string directory, std::string fname)
 {
@@ -92,20 +92,13 @@ void Client::sendFileInfo(int socket, std::string directory, std::string fname)
     
     for(std::string hash : hashes)
     {
-        msg::Message fileinfo(310);
+        msg::Message fileinfo(105);
 
-        int name_size = fname.size();
-        const char* ns = static_cast<char*>( static_cast<void*>(&name_size) );
-        fileinfo.buffer.insert(fileinfo.buffer.end(), ns, ns + sizeof(int));    //name size
+        fileinfo.writeInt(fname.size());    //name size
+        fileinfo.writeString(fname);        //file name
 
-        fileinfo.buffer.insert(fileinfo.buffer.end(), fname.begin(), fname.end());  //file name
-
-        const char* c = static_cast<char*>( static_cast<void*>(&i) );
-        fileinfo.buffer.insert(fileinfo.buffer.end(), c, c + sizeof(int));  //piece number
-
-        fileinfo.buffer.insert(fileinfo.buffer.end(), hash.begin(), hash.end());    //hash for that piece
-
-        fileinfo.buf_length = fileinfo.buffer.size();
+        fileinfo.writeInt(i);               //piece number
+        fileinfo.writeString(hash);         //hash for that piece
 
         fileinfo.sendMessage(socket);   //nalezy wyroznic jakos socket przez ktory komunikujemy sie z serwerem
 
@@ -118,9 +111,8 @@ void Client::sendFilesInfo()
 {
     std::vector<std::string> file_names = std::move(console->getDirFiles());
 
-    for(std::string fname : file_names) sendFileInfo(*clientSockets.begin(), "clientFiles", fname);
+    for(std::string fname : file_names) sendFileInfo(mainServerSocket, "clientFiles", fname);
 }
-
 
 void Client::signal_waiter()
 {
@@ -134,8 +126,8 @@ void Client::signal_waiter()
 	}
 }
 
-
-void Client::setSigmask(){
+void Client::setSigmask()
+{
 
     sigemptyset (&signal_set);
     sigaddset (&signal_set, SIGINT);
@@ -144,7 +136,6 @@ void Client::setSigmask(){
         std::cerr<<"Setting signal mask failed"<<std::endl;
 }
 
-
 void Client::prepareSockaddrStruct(struct sockaddr_in& x, const char ipAddr[15], const int& port)
 {
     x.sin_family = AF_INET;
@@ -152,7 +143,6 @@ void Client::prepareSockaddrStruct(struct sockaddr_in& x, const char ipAddr[15],
         throw std::invalid_argument("Improper IPv4 address: " + std::string(ipAddr));
     x.sin_port = htons(port);
 }
-
 
 void Client::getUserCommands()
  {
@@ -163,7 +153,6 @@ void Client::getUserCommands()
         console->processCommands(buffer);        // exception?????
     }
  }
-
 
 void Client::handleCommands()
 {
@@ -178,6 +167,28 @@ void Client::handleCommands()
     }
 }
 
+void Client::handleMessagesfromServer()
+{
+    if(mainServerSocket == -1 || !FD_ISSET(mainServerSocket, &ready)) return;
+
+    if(msg_manager.assembleMsg(mainServerSocket))
+    {
+        msg::Message msg = msg_manager.readMsg(mainServerSocket);
+        std::cout << "Received from server: " << msg.type << std::endl;
+
+        if(msg.type == 211)                                // tu msg
+        {
+            std::cout << "Server disconnected!" << std::endl;
+            run_stop_flag = true;
+        }
+    }
+    else if(msg_manager.lastReadResult() == 0 || msg_manager.lastReadResult() == -1) //server left
+    {
+        std::cout << "Lost connection with server!" << std::endl;
+        run_stop_flag = true;
+    }
+
+}
 
 void Client::handleMessages()
 {
@@ -188,7 +199,7 @@ void Client::handleMessages()
             msg::Message msg = msg_manager.readMsg(*it);
 
             std::cout << (int) msg.type << std::endl;
-            if(msg.type == msg::Message::Type::disconnect_client)                                // tu msg
+            if(msg.type == 111)                                // tu msg
             {
                 close(*it);
                 it = serverSockets.erase(it);
@@ -214,10 +225,15 @@ void Client::turnOff()
 	pthread_kill(signal_thread.native_handle(), SIGINT);    // ubicie ewentualnego sigwaita
     signal_thread.join();
 
-    int result;
+    msg::Message(111).sendMessage(mainServerSocket);
+    int result = close(mainServerSocket);
+    if(result == -1)
+        std::cerr<<"Closing "<< mainServerSocket <<" socket failed"<<std::endl;
+
     for(auto it = clientSockets.begin(); it != clientSockets.end(); ++it){  // zamknięcie socketów
 		std::cout<<"Closing client socket ("<<*it<<")"<<std::endl;
 
+        msg::Message(111).sendMessage(*it);
         result = close(*it);
         if(result == -1){
             std::cerr<<"Closing "<<*it<<" socket failed"<<std::endl;
@@ -228,6 +244,7 @@ void Client::turnOff()
     for(auto it = serverSockets.begin(); it != serverSockets.end(); ++it){
 		std::cout<<"Closing server socket ("<<*it<<")"<<std::endl;
 
+        msg::Message(111).sendMessage(*it);
         result = close(*it);
 
         if(result == -1){
@@ -245,6 +262,8 @@ void Client::setFileDescrMask()
     FD_SET(0, &ready);
     FD_SET(sockFd, &ready);
 
+    if(mainServerSocket != -1) FD_SET(mainServerSocket, &ready);
+
     for(const int &i : clientSockets)
         FD_SET(i, &ready);
 
@@ -256,6 +275,8 @@ void Client::run()
 {
     setSigmask();       // Set sigmask for all threads
     signal_thread = std::thread(&Client::signal_waiter, this);        // Create the sigwait thread
+
+    std::time_t keep_alive_timer = std::time(0);
 
     while(!interrupted_flag && !run_stop_flag && console->getState() != State::down)
     {
@@ -276,9 +297,17 @@ void Client::run()
             std::cout << "serverSocketsNum = " << serverSocketsNum << std::endl;
         }
 
+        handleMessagesfromServer();
         handleMessages();
         getUserCommands();
         handleCommands();
+
+        if(std::time(0) - keep_alive_timer > 5)    //keep_alive co 5s
+        {
+            if(mainServerSocket != -1) msg::Message(110).sendMessage(mainServerSocket);
+            keep_alive_timer = std::time(0);
+        }
+
     }
         turnOff();
 }
