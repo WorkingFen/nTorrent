@@ -41,10 +41,12 @@ server::Server::Server(const char srv_ip[15], const int& srv_port) : sigint_flag
 
     timeout.tv_sec = 1;
     timeout.tv_usec = 0;
+    
     socket_srv();
     int enable = 1;
-    if (setsockopt(listener, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(int)) < 0)
-        std::cerr<<"setting SO_REUSEADDR option on socket "<<listener<<" failed"<<std::endl; 
+    if(setsockopt(listener, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(int)) < 0)
+        std::cerr << "setting SO_REUSEADDR option on socket " << listener << " failed" << std::endl;
+
     bind_srv(srv_ip, srv_port);
     listen_srv();
     while(!sigint_flag){
