@@ -39,6 +39,17 @@ typedef std::list<int> cts_list;
 typedef std::list<int>::iterator cts_list_it; 
 
 namespace server {
+    struct block {
+        int no;                         // Number of block
+        int hash;                       // Block hash
+        cts_list owners;   // Vector of clients who do have this block
+    };
+    
+    struct file{
+        std::string name;               // Name of file
+        std::vector<block> blocks;      // Vector of blocks
+    };
+
     class Server{
         private:    
             msg::MessageManager msg_manager;
@@ -49,7 +60,8 @@ namespace server {
             cts_list_it cts_it;         // Iterator of clients' list
             int max_fd;                 // Max file descriptor number
             timeval timeout;            // Timeout for select_ct()
-            fd_set bits_fd;             // Bits for file descriptors 
+            fd_set bits_fd;             // Bits for file descriptors
+            std::vector<file> files;    // Vector of files
 #ifdef CTNAME
             char host[NI_MAXHOST];
             char svc[NI_MAXSERV];
@@ -64,6 +76,10 @@ namespace server {
         public:
             Server(const char srv_ip[15], const int& srv_port);
             ~Server();
+
+            void add_file(std::string);
+            void add_block(int, int);
+            void add_owner(int);
 
             void socket_srv();
             void bind_srv(const char srv_ip[15], const int& srv_port);

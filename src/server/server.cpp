@@ -35,6 +35,18 @@ void server::Server::shutdown() {
     close(listener);
 }
 
+void server::Server::add_file(std::string name) {
+
+}
+
+void server::Server::add_block(int no, int hash) {
+
+}
+
+void server::Server::add_owner(int owner) {
+
+}
+
 server::Server::Server(const char srv_ip[15], const int& srv_port) : sigint_flag(false) {
     set_SIGmask();
     signal_thread = std::thread(&Server::signal_waiter, this);
