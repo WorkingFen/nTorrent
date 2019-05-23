@@ -13,6 +13,7 @@
 #include <stdexcept>
 #include <thread>
 #include <signal.h>
+#include <chrono>
 #include "../../message/message.hpp"
 
 #define SRVNOCONN 404
@@ -41,13 +42,22 @@ typedef std::list<int>::iterator cts_list_it;
 namespace server {
     struct block {
         int no;                         // Number of block
-        int hash;                       // Block hash
-        cts_list owners;   // Vector of clients who do have this block
+        std::string hash;               // Block hash
+        cts_list owners;                // Vector of clients who do have this block
     };
     
-    struct file{
+    struct file {
+        int size;                       // Size of file
         std::string name;               // Name of file
         std::vector<block> blocks;      // Vector of blocks
+    };
+
+    struct client {
+        char ip[15];                    // IP address 
+        int port;                       // Port
+        int socket;                     // Client's socket
+        int timeout;                    // Time after which connection should end
+        int no_leeches;                 // Number of active leeches
     };
 
     class Server{
@@ -77,9 +87,17 @@ namespace server {
             Server(const char srv_ip[15], const int& srv_port);
             ~Server();
 
-            void add_file(std::string);
-            void add_block(int, int);
-            void add_owner(int);
+            file& add_file(std::string, int);
+            block& add_block(file&, int, std::string);
+            void add_owner(block&, int);
+
+            file& get_file();
+            block& get_block();
+            client& get_owner();
+
+            void delete_file();
+            void delete_block();
+            void delete_owner();
 
             void socket_srv();
             void bind_srv(const char srv_ip[15], const int& srv_port);

@@ -253,7 +253,7 @@ void Client::putPiece(string fileName, int index, int pieceLength, string pieceD
 	filePieces.seekp(long(offset), std::ios_base::beg);
 
 	filePieces << pieceData;
-''
+
 	filePieces.close();
 
 	string fileConfigName = fileName;
