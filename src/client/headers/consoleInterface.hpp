@@ -8,6 +8,7 @@
 #include <string.h>
 #include <vector>
 #include <queue>
+#include <sys/stat.h>
 
 enum class State      // stan, w jakim znajduje się użytkownik (determinuje obsługę i/o)
 {
@@ -40,13 +41,14 @@ class ConsoleInterface
 
     void setDir();
     std::vector<std::string> getDirFiles();
-    void calculateHashes();
     void processCommands(const char* buf);
     void handleInput();
 
     void stopSeeding();
     void stopLeeching();
     State getState();
+
+    off_t getFileSize(const std::string& filename);
 };
 
 #endif

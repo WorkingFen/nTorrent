@@ -142,19 +142,6 @@ vector<string> ConsoleInterface::getDirFiles(){
     return fileNames;
 }
 
-void ConsoleInterface::calculateHashes(){
-    vector<string> fileNames = getDirFiles();
-    vector<vector<string>> hashes;
-    string path;
-    for(auto it = fileNames.begin(); it != fileNames.end(); ++it){
-
-        cout<<fileDirName<<":"<<*it<<endl;
-        path = fileDirName + *it;
-
-        hashes.push_back(hashPieces(path, 10));
-    }
-}
-
 void ConsoleInterface::processCommands(const char* buf)
 {
     buffer.insert(buffer.end(), buf, buf+strlen(buf));
@@ -193,4 +180,16 @@ void ConsoleInterface::stopLeeching()
 
 State ConsoleInterface::getState(){
     return state;
+}
+
+off_t ConsoleInterface::getFileSize(const std::string& filename)
+{
+    struct stat fileStats;
+    char* filePath = strcat(fileDirName,"/");
+    filePath = strcat(filePath, filename.c_str());
+
+    if(stat(filePath, &fileStats) == -1)
+        throw std::runtime_error("Error while retrieving info about file!");
+    
+    return fileStats.st_size;
 }
