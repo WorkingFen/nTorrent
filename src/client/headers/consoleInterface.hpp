@@ -25,13 +25,10 @@ class Client;
 class ConsoleInterface
 {
     Client& client;
-    char fileDirName[1000];
-    DIR *fileDir;
     State state;
     std::vector<char> buffer;
     std::queue<std::string> commandQueue;
 
-    void printFolderContent();
     void handleInputUp();
     void handleInputConnected();
 
@@ -39,16 +36,12 @@ class ConsoleInterface
     ConsoleInterface(Client& c);
     ~ConsoleInterface();
 
-    void setDir();
-    std::vector<std::string> getDirFiles();
     void processCommands(const char* buf);
     void handleInput();
 
     void stopSeeding();
     void stopLeeching();
     State getState();
-
-    off_t getFileSize(const std::string& filename);
 };
 
 #endif

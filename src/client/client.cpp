@@ -86,6 +86,16 @@ void Client::setConsoleInterface(ConsoleInterfacePtr& x)
     console = std::move(x);
 }
 
+void Client::setFileManager(FileManagerPtr& x)
+{
+    fileManager = std::move(x);
+}
+
+void Client::printFolderContent()
+{
+    fileManager->printFolderContent();
+}
+
 void Client::signal_waiter()
 {
 	int sig_number;
@@ -210,7 +220,7 @@ void Client::shareFile(int socket, std::string directory, std::string fname)
 
 void Client::shareFiles()
 {
-    std::vector<std::string> file_names = std::move(console->getDirFiles());
+    std::vector<std::string> file_names = std::move(fileManager->getDirFiles());
 
     for(std::string fname : file_names) shareFile(mainServerSocket, "clientFiles", fname);
 }
@@ -238,7 +248,7 @@ void Client::sendFileInfo(int socket, std::string directory, std::string fname)
 
 void Client::sendFilesInfo()
 {
-    std::vector<std::string> file_names = std::move(console->getDirFiles());
+    std::vector<std::string> file_names = std::move(fileManager->getDirFiles());
 
     for(std::string fname : file_names) sendFileInfo(mainServerSocket, "clientFiles", fname);
 }
