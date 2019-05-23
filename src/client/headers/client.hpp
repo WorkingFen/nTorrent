@@ -67,7 +67,7 @@ class Client
         void shareFiles();
         void sendFileInfo(int socket, std::string directory, std::string filename);
         void sendFilesInfo();
-        void putPiece(string fileName, int index, int pieceLength, string pieceData);        
+        void putPiece(std::string fileName, int index, int pieceLength, std::string pieceData);        
 
         void run();                                                   // pętla z selectem
 
