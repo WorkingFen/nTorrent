@@ -50,7 +50,7 @@ class Client
         void handleMessages();
         void getUserCommands();
         void handleCommands();
-        
+
         void turnOff();                                               // metoda kończąca wszystkie połączenia
         void setFileDescrMask();                                      // metoda ustawiająca maskę deskryptorów plików
 
@@ -67,6 +67,7 @@ class Client
         void shareFiles();
         void sendFileInfo(int socket, std::string directory, std::string filename);
         void sendFilesInfo();
+        void putPiece(string fileName, int index, int pieceLength, string pieceData);        
 
         void run();                                                   // pętla z selectem
 

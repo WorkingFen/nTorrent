@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <string>
 #include <ctime>
+#include <fstream>
 
 using namespace msg;
 
@@ -241,6 +242,31 @@ void Client::sendFilesInfo()
 
     for(std::string fname : file_names) sendFileInfo(mainServerSocket, "clientFiles", fname);
 }
+
+void Client::putPiece(string fileName, int index, int pieceLength, string pieceData) {      //Dla każdego pobieranego pliku tworzy plik.conf
+    // co jak zabijemy proces i zostanie plik.conf i pofragmentowany plik?
+    // można na starcie programu czyścić katalogi z tymi plikami
+
+	std::ofstream filePieces(fileName.c_str());
+
+	int offset = index * pieceLength;
+	filePieces.seekp(long(offset), std::ios_base::beg);
+
+	filePieces << pieceData;
+''
+	filePieces.close();
+
+	string fileConfigName = fileName;
+	fileConfigName += ".conf";
+
+	std::ofstream fileConfig(fileConfigName.c_str(), std::ios::app);
+
+	fileConfig << index;
+	fileConfig << std::endl;
+
+    fileConfig.close();
+}
+
 
 void Client::turnOff()
 {
