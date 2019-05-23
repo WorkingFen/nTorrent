@@ -18,7 +18,6 @@ void server::Server::set_SIGmask() {
     int status = pthread_sigmask(SIG_BLOCK, &signal_set, NULL);
     if(status != 0)
         throw std::runtime_error("Setting signal mask failed");
-        //std::cerr << "Setting signal mask failed" << std::endl;
 }
 
 // Close all connections
@@ -33,6 +32,31 @@ void server::Server::shutdown() {
         close_ct();
     }
     close(listener);
+}
+
+server::file& server::Server::add_file(std::string name, int size) {
+    for(auto i : files) if(i.name == name) return i;
+
+    file tmp;
+    tmp.name = name;
+    files.push_back(tmp);
+    return tmp;
+}
+
+server::block& server::Server::add_block(server::file& foo, int no, std::string hash) {
+    for(auto i : foo.blocks) if(i.hash == hash) return i;
+
+    block tmp;
+    tmp.no = no;
+    tmp.hash = hash;
+    foo.blocks.push_back(tmp);
+    return tmp;
+}
+
+void server::Server::add_owner(server::block& foo, int owner) {
+    for(auto i : foo.owners) if(i == owner) return;
+
+    foo.owners.push_back(owner);
 }
 
 server::Server::Server(const char srv_ip[15], const int& srv_port) : sigint_flag(false) {
@@ -61,52 +85,34 @@ server::Server::Server(const char srv_ip[15], const int& srv_port) : sigint_flag
 
 // Create listener socket
 void server::Server::socket_srv() {
-    if((listener = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
+    if((listener = socket(AF_INET, SOCK_STREAM, 0)) == -1)
         throw std::runtime_error("Can't create a socket!");
-        //std::cerr << "Can't create a socket";
-        //return SRVERROR;
-    }
+
     max_fd = listener + 1;
-    //return SRVNORM;
 }
 
 // Bind socket to ip:port 
 void server::Server::bind_srv(const char srv_ip[15], const int& srv_port) {
     server.sin_family = AF_INET;
     server.sin_port = htons(srv_port);
-    if(inet_pton(AF_INET, srv_ip, &server.sin_addr) == -1) {
+    if(inet_pton(AF_INET, srv_ip, &server.sin_addr) == -1)
         throw std::domain_error("Improper IPv4 address");
-        //std::cerr << "Improper IPv4 address";
-        //return SRVERROR;
-    }
 
-    if(bind(listener, (sockaddr*)&server, sizeof(server)) == -1) {
+    if(bind(listener, (sockaddr*)&server, sizeof(server)) == -1)
         throw std::runtime_error("Can't bind to IP:port");
-        //std::cerr << "Can't bind to IP:port";
-        //return SRVERROR;
-    }
 
 #ifdef SOCKNAME
     socklen_t sa_len = sizeof(server);
-    if(getsockname(listener, (sockaddr*)&server, &sa_len) == -1) {
-        throw std::runtime_error("Can't get socket name");
-        //std::cerr << "Can't get socket name";
-        //return SRVERROR;
-    }
+    if(getsockname(listener, (sockaddr*)&server, &sa_len) == -1)
+        throw std::runtime_error("Can't get socket name");    
     std::cout << "Successfully connected and listening at: " << srv_ip << ":" << ntohs(server.sin_port) << std::endl;
 #endif
-    
-    //return SRVNORM;
 }
 
 // Start listening on listener socket, with SOMAXCONN connections
 void server::Server::listen_srv() {
-    if(listen(listener, SOMAXCONN) == -1) {
+    if(listen(listener, SOMAXCONN) == -1)
         throw std::runtime_error("Can't listen!");
-        //std::cerr << "Can't listen!";
-        //return SRVERROR;
-    }
-    //return SRVNORM;
 }
 
 // Select clients
@@ -117,12 +123,8 @@ void server::Server::select_cts() {
     for(auto i : clients_sockets)
         FD_SET(i, &bits_fd);
 
-    if(select(max_fd, &bits_fd, (fd_set*)0, (fd_set*)0, &timeout) == -1) {
+    if(select(max_fd, &bits_fd, (fd_set*)0, (fd_set*)0, &timeout) == -1)
         throw std::runtime_error("Select call failed");
-        //std::cerr << "Select call failed" << std::endl;
-        //return SRVERROR;
-    }
-    //return SRVNORM;
 }
 
 // Accept new client
@@ -134,13 +136,9 @@ void server::Server::accept_srv() {
         clients_sockets.push_back(ct_socket);
         max_fd = std::max(max_fd, ct_socket+1);
 
-        if(clients_sockets.back() == -1) {
+        if(clients_sockets.back() == -1)
             throw std::runtime_error("Problem with client connecting");
-            //std::cerr << "Problem with client connecting!";
-            //return SRVERROR;
-        }
         else {
-
 #ifdef CTNAME
             memset(host, 0, NI_MAXHOST);
             memset(svc, 0, NI_MAXSERV);
@@ -153,11 +151,8 @@ void server::Server::accept_srv() {
                 std::cout << host << " connected on " << ntohs(client.sin_port) << std::endl;
             }
 #endif
-
         }
-        //return SRVNORM;
     }
-    //return SRVNOCONN;
 }
 
 // Check clients' messages
@@ -165,14 +160,10 @@ void server::Server::check_cts() {
     for(cts_it = clients_sockets.begin(); cts_it != clients_sockets.end(); ) {
         if(FD_ISSET(*cts_it, &bits_fd)) {
             int bytes_rcv = read_srv(msg_buf);
-            if(bytes_rcv == SRVERROR || bytes_rcv == SRVNOCONN || bytes_rcv == SRVNORM) {
+            if(bytes_rcv == SRVERROR || bytes_rcv == SRVNOCONN) {
                 close_ct();
                 continue;
             }
-            // if(write_srv(msg_buf, bytes_rcv+1) == SRVERROR) {
-            //     close_ct();
-            //     continue;
-            // }
         }
         ++cts_it;
     }
@@ -180,45 +171,101 @@ void server::Server::check_cts() {
 
 // Write new message to client with ID: client_id
 int server::Server::write_srv(const void* buffer, size_t msg_size) {
+    // TODO: Depending on Message
     if(send(*cts_it, buffer, msg_size, 0) == -1) return SRVERROR;
     else return SRVNORM;
 }
 
 // Read message from client with ID: client_id
 int server::Server::read_srv(char* buffer) {
-    //memset(buffer, 0, sizeof(buffer));
-
-    //int bytes_rcv = recv(*cts_it, buffer, sizeof(buffer), 0); // Needed for connection issues
-    //int bytes_rcv = msg_manager.lastReadResult();
-
-    // if(bytes_csv == -1) {
-    //     std::cerr << "There was a connection issue" << std::endl;
-    //     return SRVERROR;
-    // }
-    // else if(bytes_rcv == 0) {
-    //     std::cout << "The client disconnected" << std::endl;
-    //     return SRVNOCONN;
-    // }
     if(!msg_manager.assembleMsg(*cts_it))
-        return msg_manager.lastReadResult();//SRVERROR;      // Or not? I don't know what means "false". One time it's error and another it's more bytes?
+        return msg_manager.lastReadResult();
 
     msg::Message msg = msg_manager.readMsg(*cts_it);
 
     if(msg.type == -1) {
+#ifdef LOGS
         std::cerr << "There was a connection issue" << std::endl;
+#endif        
         return SRVERROR;
     }
-    else if(msg.type == 111) {
-        std::cout << "The client disconnected" << std::endl;
-        return SRVNOCONN;
-    }
-    else if(msg.type == 110) {
-        std::cout << std::endl << "Keep alive socket number " << *cts_it << std::endl;
-    }
     else if(msg.type == 101) {
-
+        int name_size = msg.readInt();
+        file foo = add_file(msg.readString(name_size), msg.readInt());
+        block bar;
+        for(int i = 0; msg.buf_length > 0; i++) {
+            bar = add_block(foo, i, msg.readString(64));
+            add_owner(bar, *cts_it);
+        }
+#ifdef LOGS
         std::cout << std::endl << "Message type: " << msg.type << std::endl;
+        std::cout << "File name: " << foo.name << std::endl;
+        std::cout << "File size: " << foo.size << std::endl;
+        for(auto i : foo.blocks)
+            std::cout << "Piece hash: " << i.hash << std::endl;
+#endif
+    }
+    else if(msg.type == 102) {
+        msg::Message file_list(203);   // TODO
 
+        for(auto i : files) {
+            file_list.writeInt(i.name.size());
+            file_list.writeString(i.name);
+            file_list.writeInt(i.size);
+        }
+#ifdef LOGS
+        std::cout << std::endl << "Message type: " << msg.type << std::endl;
+#endif
+    }
+    else if(msg.type == 103) {
+// TODO:
+#ifdef LOGS
+        std::cout << std::endl << "Message type: " << msg.type << std::endl;
+#endif
+        int name_size = msg.readInt();     
+
+        std::cout << "File name: " << msg.readString(name_size) << std::endl;
+        std::cout << "Piece hash: " << msg.readString(64) << std::endl;
+    }
+    else if(msg.type == 104) {
+// TODO:
+#ifdef LOGS
+        std::cout << std::endl << "Message type: " << msg.type << std::endl;
+#endif
+        int name_size = msg.readInt();     
+
+        std::cout << "File name: " << msg.readString(name_size) << std::endl;
+    }
+    else if(msg.type == 105) {
+        int name_size = msg.readInt();
+        file foo = add_file(msg.readString(name_size), 0);
+        block bar = add_block(foo, msg.readInt(), msg.readString(64));
+        add_owner(bar, *cts_it);     
+#ifdef LOGS
+        std::cout << std::endl << "Message type: " << msg.type << std::endl;
+        std::cout << "File name: " << foo.name << std::endl;
+        std::cout << "Piece number: " << bar.no << std::endl;
+        std::cout << "Piece hash: " << bar.hash << std::endl;
+#endif
+    }
+    else if(msg.type == 106) {
+// TODO: ????
+        int name_size = msg.readInt();
+        // file foo = get_file()                // TODO
+
+        std::cout << "File name: " << msg.readString(name_size) << std::endl;
+        std::cout << "File size: " << msg.readInt() << std::endl;
+        while(msg.buf_length > 0)
+            std::cout << "Piece hash: " << msg.readString(64) << std::endl;    
+#ifdef LOGS
+        std::cout << std::endl << "Message type: " << msg.type << std::endl;
+#endif
+    }
+    else if(msg.type == 107) {
+// TODO: ????
+#ifdef LOGS
+        std::cout << std::endl << "Message type: " << msg.type << std::endl;
+#endif
         int name_size = msg.readInt();     
 
         std::cout << "File name: " << msg.readString(name_size) << std::endl;
@@ -226,15 +273,16 @@ int server::Server::read_srv(char* buffer) {
         while(msg.buf_length > 0)
             std::cout << "Piece hash: " << msg.readString(64) << std::endl;
     }
-    else if(msg.type == 105) {
-
-        std::cout << std::endl << "Message type: " << msg.type << std::endl;
-
-        int name_size = msg.readInt();     
-
-        std::cout << "File info: " << msg.readString(name_size) << std::endl;
-        std::cout << "Piece number: " << msg.readInt() << std::endl;
-        std::cout << "Piece hash: " << msg.readString(64) << std::endl;
+    else if(msg.type == 110) {
+#ifdef LOGS
+        std::cout << std::endl << "KeepAlive: on socket number " << *cts_it << std::endl;
+#endif
+    }
+    else if(msg.type == 111) {
+#ifdef LOGS
+        std::cout << "The client disconnected" << std::endl;
+#endif
+        return SRVNOCONN;
     }
     else {
         std::cout << "Received: " << msg.type << std::endl;
@@ -246,19 +294,18 @@ int server::Server::read_srv(char* buffer) {
         std::cout << std::endl;
     }
 
-    return msg.buf_length + 8;
+    return SRVNORM;
 }
 
 // Close connection with client whose ID: client_id
 void server::Server::close_ct() {
-    if(close(*cts_it) == -1) {
+    if(close(*cts_it) == -1)
         throw std::runtime_error("Couldn't close client's socket");
-        //return SRVERROR;
-    }
     else cts_it = clients_sockets.erase(cts_it);
-    //return SRVNORM;
 }
 
 server::Server::~Server() {
+#ifdef LOGS
     std::cout << "Disconnected" << std::endl;
+#endif
 }
