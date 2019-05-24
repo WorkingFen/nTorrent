@@ -48,9 +48,6 @@ Client::Client(const char ipAddr[15], const int& port, const char serverIpAddr[1
     {
         this->port=port;
     }
-    //fileManager->putPiece("example_out.txt", 0, 10, "AAAAAAAAAA");
-	//fileManager->putPiece("example_out.txt", 2, 10, "BBBBBBBBBB");
-	//fileManager->putPiece("example_out.txt", 4, 10, "CCCCCCCCCC");
     std::cout << "Successfully connected and listening at: " << ipAddr << ":" << this->port << std::endl;
 }
 

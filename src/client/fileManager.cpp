@@ -67,8 +67,9 @@ off_t FileManager::getFileSize(const std::string& filename)
 void FileManager::putPiece(std::string fileName, int index, int pieceLength, std::string pieceData) {      //Dla każdego pobieranego pliku tworzy plik.conf
     // chyba na starcie programu trzeba czyścić katalogi z niekompletnymi plikami i .conf
 
-    //std::ofstream fileCreate(fileName.c_str()); // jeśli jeszcze nie istnieje, tworzy nowy plik
-    //fileCreate.close();
+    std::ofstream fileCreate(fileName.c_str(), std::ios::app); // jeśli jeszcze nie istnieje, tworzy nowy plik
+    fileCreate.close();
+    
 	std::fstream filePieces(fileName.c_str());
 
 	off_t offset = index * pieceLength;
