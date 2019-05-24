@@ -140,7 +140,7 @@ void ConsoleInterface::handleInput()
         std::string input=commandQueue.front();
         commandQueue.pop();
         vector<std::string> tokens = splitBySpace(input);
-        
+        if(tokens.size() == 0) tokens.push_back("");
         if(state == State::up)  handleInputUp(tokens);
         else if(state == State::connected || state == State::seeding || state == State::seeding || state == State::both) handleInputConnected(tokens); // prawie takie same
     }
