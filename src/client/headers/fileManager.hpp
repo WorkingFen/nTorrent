@@ -22,6 +22,8 @@ class FileManager
     void setDir();
     std::vector<std::string> getDirFiles();   
     off_t getFileSize(const std::string& filename); 
+    void putPiece(std::string fileName, int index, int pieceLength, std::string pieceData);        
+
 };
 
 #endif
