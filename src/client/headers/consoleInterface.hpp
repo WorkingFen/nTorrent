@@ -20,35 +20,26 @@ enum class State      // stan, w jakim znajduje się użytkownik (determinuje ob
     down              // użytkownik wybrał opcję zakończenia program
 };
 
-class Client;
-
-class ConsoleInterface
+class Client::ConsoleInterface
 {
-    Client& client;
-    char fileDirName[1000];
-    DIR *fileDir;
     State state;
     std::vector<char> buffer;
     std::queue<std::string> commandQueue;
 
-    void printFolderContent();
-    void handleInputUp();
-    void handleInputConnected();
+    void handleInputUp(Client& client, std::vector<std::string> input);
+    void handleInputConnected(Client& client, std::vector<std::string> input);
 
     public:
-    ConsoleInterface(Client& c);
+    ConsoleInterface();
     ~ConsoleInterface();
 
-    void setDir();
-    std::vector<std::string> getDirFiles();
     void processCommands(const char* buf);
-    void handleInput();
+    std::vector<std::string> splitBySpace(std::string input);       // pewnie powinno być w jakimś utils.h
+    void handleInput(Client& client);
 
     void stopSeeding();
     void stopLeeching();
     State getState();
-
-    off_t getFileSize(const std::string& filename);
 };
 
 #endif

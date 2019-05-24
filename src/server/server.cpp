@@ -28,31 +28,83 @@ void server::Server::shutdown() {
 #endif
     while(clients.size() != 0) {
         cts_it = clients.begin();
+        msg::Message reply(211);
+        reply.sendMessage(cts_it->socket);
         close_ct();
     }
     close(listener);
 }
 
-server::file server::Server::add_file(std::string name, int size) {
-    for(auto i : files) if(i.name == name) return i;
-
-    file tmp(name,size);
-    files.push_back(tmp);
-    return tmp;
+server::file* server::Server::add_file(std::string name) {
+    auto result = files.find(name);
+    if(result != files.end()) return &(result->second);
+    else return nullptr;
 }
 
-server::block server::Server::add_block(server::file& foo, int no, std::string hash) {
-    for(auto i : foo.blocks) if(i.hash == hash) return i;
+server::file* server::Server::add_file(int size, std::string name) {
+    auto result = files.find(name);
+    if(result != files.end()) return &(result->second);
 
-    block tmp(no, hash);
+    file tmp(name, size);
+    auto insertion = files.insert({tmp.name, tmp});
+    return &(insertion.first->second);
+}
+
+server::block* server::Server::add_block(server::file& foo, std::string hash) {
+    for(auto i : foo.blocks) if(i.hash == hash) return &i;
+
+    block tmp(hash);
     foo.blocks.push_back(tmp);
-    return tmp;
+    return &(foo.blocks.back());
+}
+
+bool server::Server::add_block(server::file& foo, std::string hash, uint no) {
+    if(no >= foo.blocks.size()) return false;
+
+    for(uint i = 0; i < foo.blocks.size(); i++)
+        if(foo.blocks[i].hash == hash && i == no) {
+            add_owner(foo.blocks[i], *cts_it);
+            return true;
+        }
+
+    return false;
 }
 
 void server::Server::add_owner(server::block& foo, server::client owner) {
     for(auto i : foo.owners) if(i.socket == owner.socket) return;
 
     foo.owners.push_back(owner);
+}
+
+server::block* server::Server::get_block(server::file& foo, uint no) {
+    if(no < foo.blocks.size()) return &(foo.blocks[no]);
+    else return nullptr;
+}
+
+void server::Server::delete_file(std::map<std::string, server::file>::iterator it) {
+    files.erase(it);
+}
+
+bool server::Server::delete_block(server::file& foo, int no) {
+    for(auto i = foo.blocks.begin(); i != foo.blocks.end(); i++)
+        if(i->hash == foo.blocks[no].hash) {
+            foo.blocks.erase(i);
+            break;
+        }
+    
+    if(foo.blocks.empty()) return true;
+    else return false;
+}
+
+bool server::Server::delete_owner(server::block& foo) {
+    for(auto i = foo.owners.begin(); i != foo.owners.end(); i++)
+        if(i->socket == cts_it->socket) {
+            foo.owners.erase(i);
+            break;
+        }
+    
+    if(foo.owners.empty()) return true;
+    else return false;
 }
 
 server::Server::Server(const char srv_ip[15], const int& srv_port) : sigint_flag(false) {
@@ -136,6 +188,9 @@ void server::Server::accept_srv() {
         if(clients.back().socket == -1)
             throw std::runtime_error("Problem with client connecting");
         else {
+            msg::Message reply(210);
+            reply.writeInt(pieceSize);
+            reply.sendMessage(ct_socket);
 #ifdef CTNAME
             memset(host, 0, NI_MAXHOST);
             memset(svc, 0, NI_MAXSERV);
@@ -166,13 +221,6 @@ void server::Server::check_cts() {
     }
 }
 
-// Write new message to client with ID: client_id
-int server::Server::write_srv(const void* buffer, size_t msg_size) {
-    // TODO: Depending on Message
-    if(send(cts_it->socket, buffer, msg_size, 0) == -1) return SRVERROR;
-    else return SRVNORM;
-}
-
 // Read message from client with ID: client_id
 int server::Server::read_srv() {
     if(!msg_manager.assembleMsg(cts_it->socket)) {
@@ -189,76 +237,64 @@ int server::Server::read_srv() {
         return SRVERROR;
     }
     else if(msg.type == 101) {
-        int name_size = msg.readInt();
-        file foo = add_file(msg.readString(name_size), msg.readInt());
-        block bar;
+        file* foo = add_file(msg.readInt(), msg.readString(msg.readInt()));  // Weird specification of C++ compiler?
         for(int i = 0; msg.buf_length > 0; i++) {
-            bar = add_block(foo, i, msg.readString(64));
-            add_owner(bar, *cts_it);
+            block* bar = add_block(*foo, msg.readString(64));
+            add_owner(*bar, *cts_it);
         }
 #ifdef LOGS
         std::cout << std::endl << "Message type: " << msg.type << std::endl;
-        std::cout << "Name size: " << name_size << std::endl;
-        std::cout << "File name: " << foo.name << std::endl;
-        std::cout << "File size: " << foo.size << std::endl;
-        for(auto i : foo.blocks)
+        std::cout << "File name: " << foo->name << std::endl;
+        std::cout << "File size: " << foo->size << std::endl;
+        for(auto i : foo->blocks)
             std::cout << "Piece hash: " << i.hash << std::endl;
-        for(auto i : files) {
-            std::cout << std::endl << std::endl << i.name << " " << i.size << std::endl;
-            int no = 0;
-            for(auto j : i.blocks) {
-                std::cout << no << ". : " << j.hash << std::endl;
-                no++;
-                for(auto k : j.owners) 
-                    std::cout << "- " << k.socket << std::endl;
-            }
-        }
 #endif
     }
-    /*else if(msg.type == 102) {
-        msg::Message file_list(203);   // TODO
-
+    else if(msg.type == 102) { 
         for(auto i : files) {
-            file_list.writeInt(i.name.size());
-            file_list.writeString(i.name);
-            file_list.writeInt(i.size);
+            msg::Message file_list(201);
+            file_list.writeInt(i.first.size());
+            file_list.writeString(i.first);
+            file_list.writeInt(i.second.size);
+            file_list.sendMessage(cts_it->socket);
         }
 #ifdef LOGS
         std::cout << std::endl << "Message type: " << msg.type << std::endl;
 #endif
     }
     else if(msg.type == 103) {
-// TODO:
+        auto foo = files.find(msg.readString(msg.readInt()));
+        int no_block = msg.readInt();
+        if(delete_owner(*get_block(foo->second, no_block)) && delete_block(foo->second, no_block)){
+            std::string name = foo->second.name;
+            delete_file(foo);
+#ifdef LOGS
+            std::cout << std::endl << "File " << name << " has been deleted" << std::endl;
+#endif
+        }
 #ifdef LOGS
         std::cout << std::endl << "Message type: " << msg.type << std::endl;
 #endif
-        int name_size = msg.readInt();     
-
-        std::cout << "File name: " << msg.readString(name_size) << std::endl;
-        std::cout << "Piece hash: " << msg.readString(64) << std::endl;
     }
-    else if(msg.type == 104) {
-// TODO:
+    /*else if(msg.type == 104) {
+// TODO
+        auto foo = files.find(msg.readString(msg.readInt()));
 #ifdef LOGS
         std::cout << std::endl << "Message type: " << msg.type << std::endl;
 #endif
-        int name_size = msg.readInt();     
-
-        std::cout << "File name: " << msg.readString(name_size) << std::endl;
-    }
+    }*/
     else if(msg.type == 105) {
-        int name_size = msg.readInt();
-        file foo = add_file(msg.readString(name_size), 0);
-        block bar = add_block(foo, msg.readInt(), msg.readString(64));
-        add_owner(bar, *cts_it);     
+        file* foo = add_file(msg.readString(msg.readInt()));
+        int no_block = msg.readInt();
+        if(!(foo != nullptr && add_block(*foo, msg.readString(64), no_block))) {}  // Wywal blad albo cos
 #ifdef LOGS
         std::cout << std::endl << "Message type: " << msg.type << std::endl;
-        std::cout << "File name: " << foo.name << std::endl;
-        std::cout << "Piece number: " << bar.no << std::endl;
-        std::cout << "Piece hash: " << bar.hash << std::endl;
+        std::cout << "File name: " << foo->name << std::endl;
+        std::cout << "Piece number: " << no_block << std::endl;
+        std::cout << "Piece hash: " << foo->blocks[no_block].hash << std::endl;
 #endif
     }
-    else if(msg.type == 106) {
+    /*else if(msg.type == 106) {
 // TODO: ????
         int name_size = msg.readInt();
         // file foo = get_file()                // TODO
@@ -284,9 +320,11 @@ int server::Server::read_srv() {
             std::cout << "Piece hash: " << msg.readString(64) << std::endl;
     }*/
     else if(msg.type == 110) {
-#ifdef LOGS
-        std::cout << std::endl << "KeepAlive: on socket number " << cts_it->socket << std::endl;
+#ifdef KEEPALIVE
+        std::cout << "KeepAlive: on socket number " << cts_it->socket << std::endl;
 #endif
+        msg::Message reply(209);
+        reply.sendMessage(cts_it->socket);
     }
     else if(msg.type == 111) {
 #ifdef LOGS

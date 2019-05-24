@@ -18,6 +18,8 @@ const std::map<int, Message::Type> Message::type_map =
 
     {201, Message::Type::file_info},
     {202, Message::Type::block_info},
+    {209, Message::Type::srv_keepalive},
+    {210, Message::Type::srv_hello},
     {211, Message::Type::server_out},
 
     {301, Message::Type::get_file},
@@ -39,9 +41,9 @@ int Message::readInt()
     //int ret = (buffer[3] << 24) | (buffer[2] << 16) | (buffer[1] << 8) | (buffer[0]);
     int ret;
     std::memcpy(&ret, &buffer[0], sizeof(int));
-    buffer.erase(buffer.begin(), buffer.begin() + 4);
+    buffer.erase(buffer.begin(), buffer.begin() + sizeof(int));
 
-    buf_length -= 4;
+    buf_length -= sizeof(int);
 
     return ret;
 }
@@ -62,7 +64,7 @@ void Message::writeInt(int i)
 
     buffer.insert(buffer.end(), ns, ns + sizeof(int));    
 
-    buf_length += 4;
+    buf_length += sizeof(int);
 }
 
 void Message::writeString(std::string s)
@@ -107,7 +109,7 @@ int MessageManager::popIntFromBuffer(int socket)
     int ret;
     std::memcpy(&ret, &buffers[socket][0], sizeof(int));   
     
-    buffers[socket].erase(buffers[socket].begin(), buffers[socket].begin() + 4);
+    buffers[socket].erase(buffers[socket].begin(), buffers[socket].begin() + sizeof(int));
 
     return ret;
 }

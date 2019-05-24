@@ -2,7 +2,7 @@ CC = g++
 CPPFLAGS = -Wall -Wextra -pedantic -std=c++14 -pthread
 
 client: client/headers/client.hpp client/client.cpp runClient.cpp message/message.cpp message/message.hpp client/headers/consoleInterface.hpp hashing/headers/hash.h hashing/headers/sha256.h
-	$(CC) -o runClient client/headers/client.hpp client/client.cpp runClient.cpp message/message.cpp message/message.hpp client/headers/consoleInterface.hpp client/consoleInterface.cpp hashing/hash.cpp hashing/sha256.cpp $(CPPFLAGS)
+	$(CC) -o runClient client/headers/client.hpp client/client.cpp runClient.cpp message/message.cpp message/message.hpp client/headers/consoleInterface.hpp client/consoleInterface.cpp client/headers/fileManager.hpp client/fileManager.cpp hashing/hash.cpp hashing/sha256.cpp $(CPPFLAGS)
 	mkdir -p -m 777 $(PWD)/clientFiles
 
 server: server/headers/server.hpp server/server.cpp runServer.cpp message/message.cpp message/message.hpp

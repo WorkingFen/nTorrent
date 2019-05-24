@@ -11,17 +11,16 @@
 #include <signal.h>
 #include <thread>
 #include <memory>
-#include "consoleInterface.hpp"
+#include "fileManager.hpp"
 #include "../../message/message.hpp"
 
-class ConsoleInterface;
-
-typedef std::unique_ptr<ConsoleInterface> ConsoleInterfacePtr;
+typedef std::unique_ptr<FileManager> FileManagerPtr;
 
 class Client
 {
     private:
-        static const int pieceSize = 10;
+        class ConsoleInterface;
+        int pieceSize = 10;
 
         int sockFd, port, clientSocketsNum, serverSocketsNum, maxFd;        // listen socket; przydzielony port efemeryczny; liczba socketów pobierających/wysyłających dane (nie licząc komunikacji z serwerem)
         struct sockaddr_in self, server;
@@ -34,8 +33,9 @@ class Client
 
         std::thread input;
         msg::MessageManager msg_manager;
-        ConsoleInterfacePtr console;
-    
+        std::unique_ptr<ConsoleInterface> console;
+        FileManagerPtr fileManager;
+
         std::thread signal_thread;              
         sigset_t signal_set;					// do ustawienia sigmask
         bool interrupted_flag = false;			// sygnalizuje użycie Ctrl+C
@@ -61,12 +61,17 @@ class Client
         void connectTo(const struct sockaddr_in &server);             // łączy się z klientem o podanym adresie (serwer powinien przesyłać gotową strukturę do klienta) lub z serwerem torrent
 
         const struct sockaddr_in& getServer() const;
-        void setConsoleInterface(ConsoleInterfacePtr& x);
 
         void shareFile(int socket, std::string directory, std::string fname);
         void shareFiles();
         void sendFileInfo(int socket, std::string directory, std::string filename);
         void sendFilesInfo();
+        void sendDeleteBlock(int socket, std::string fileName, int blockIndex);
+        void sendAskForFile(int socket, std::string fileName);
+        void sendHaveBlock(int socket, std::string fileName, int blockIndex, std::string hash);
+        void sendAskForBlock(int socket, std::string fileName, std::vector<int> blockList);
+        void sendBadBlockHash(int socket, std::string fileName, int blockIndex, std::string seederAdress);
+
         void putPiece(std::string fileName, int index, int pieceLength, std::string pieceData);        
 
         void run();                                                   // pętla z selectem

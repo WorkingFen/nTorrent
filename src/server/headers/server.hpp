@@ -34,6 +34,9 @@
     #ifndef CTNAME
         #define CTNAME
     #endif
+    #ifndef KEEPALIVE
+        #define KEEPALIVE
+    #endif
 #endif
 
 namespace server {
@@ -53,7 +56,7 @@ typedef std::list<client>::iterator cts_list_it;
 
     struct block {
         std::string hash;               // Block hash
-        cts_list owners;                // Vector of clients who do have this block
+        std::vector<client> owners;     // Vector of clients who do have this block
 
         block() {}
         block(std::string h): hash(h) {}
@@ -68,28 +71,30 @@ typedef std::list<client>::iterator cts_list_it;
         file(std::string n, int s): name(n), size(s) {}
     }; 
 
-    class Server{
-        private:    
-            sockaddr_in server;         // Server IP:port
-            int listener;               // Server-listener socket
+    class Server {
+        private:
+            static const int pieceSize = 20;
 
-            cts_list clients;   // List of clients
-            cts_list_it cts_it; // Iterator of clients' list
+            sockaddr_in server;                     // Server IP:port
+            int listener;                           // Server-listener socket
 
-            fd_set bits_fd;             // Bits for file descriptors
-            int max_fd;                 // Max file descriptor number
+            cts_list clients;                       // List of clients
+            cts_list_it cts_it;                     // Iterator of clients' list
 
-            timeval timeout;            // Timeout for select_ct()          // ?
+            fd_set bits_fd;                         // Bits for file descriptors
+            int max_fd;                             // Max file descriptor number
+
+            timeval timeout;                        // Timeout for select_ct()          // ?
             
-            std::vector<file> files;    // Vector of files
+            std::map<std::string, file> files;      // Vector of files
             msg::MessageManager msg_manager;
 #ifdef CTNAME
             char host[NI_MAXHOST];
             char svc[NI_MAXSERV];
 #endif
-            std::thread signal_thread;  // Thread for signal handling
-            sigset_t signal_set;        // Signal which should be used for set_SIGmask
-            bool sigint_flag;           // Signal of ctrl+C usage
+            std::thread signal_thread;      // Thread for signal handling
+            sigset_t signal_set;            // Signal which should be used for set_SIGmask
+            bool sigint_flag;               // Signal of ctrl+C usage
             void signal_waiter(); 
             void set_SIGmask();
             void shutdown();
@@ -98,19 +103,17 @@ typedef std::list<client>::iterator cts_list_it;
             Server(const char srv_ip[15], const int& srv_port);
             ~Server();
 
-            file add_file(std::string, int);
-            block add_block(file&, int, std::string);
+            file* add_file(std::string);
+            file* add_file(int, std::string);
+            block* add_block(file&, std::string);
+            bool add_block(file&, std::string, uint);
             void add_owner(block&, client);
 
-            file get_file(std::string);
-            block get_block(std::string);
-            block get_block(int);
-            client get_owner(sockaddr_in);
-            client get_owner(int);
+            block* get_block(file&, uint);
 
-            void delete_file();
-            void delete_block();
-            void delete_owner();
+            void delete_file(std::map<std::string, server::file>::iterator);
+            bool delete_block(file&, int);
+            bool delete_owner(block&);
 
             void socket_srv();
             void bind_srv(const char srv_ip[15], const int& srv_port);
@@ -118,7 +121,6 @@ typedef std::list<client>::iterator cts_list_it;
             void select_cts();
             void accept_srv();
             void check_cts();
-            int write_srv(const void* buffer, size_t msg_size);
             int read_srv();
             void close_ct();
     };

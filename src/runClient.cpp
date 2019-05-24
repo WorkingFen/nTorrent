@@ -14,8 +14,6 @@ int main(int argc, char* argv[])
 
     try{
         Client client((argc < 2) ? "127.0.0.1" : argv[1], 0, "127.4.0.1", 2200);
-        std::unique_ptr<ConsoleInterface> console(new ConsoleInterface(client));
-        client.setConsoleInterface(console);
         client.run();
 
     }

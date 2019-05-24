@@ -8,9 +8,11 @@
 #include <ctime>
 #include <fstream>
 
+#include "headers/consoleInterface.hpp"
+
 using namespace msg;
 
-Client::Client(const char ipAddr[15], const int& port, const char serverIpAddr[15], const int& serverPort) : clientSocketsNum(0), serverSocketsNum(0), maxFd(0)
+Client::Client(const char ipAddr[15], const int& port, const char serverIpAddr[15], const int& serverPort) : clientSocketsNum(0), serverSocketsNum(0), maxFd(0), console(std::unique_ptr<ConsoleInterface>(new ConsoleInterface)), fileManager(FileManagerPtr(new FileManager))
 {
     prepareSockaddrStruct(self, ipAddr, port);
     prepareSockaddrStruct(server, serverIpAddr, serverPort);
@@ -81,11 +83,6 @@ const struct sockaddr_in& Client::getServer() const
     return server;
 }
 
-void Client::setConsoleInterface(ConsoleInterfacePtr& x)
-{
-    console = std::move(x);
-}
-
 void Client::signal_waiter()
 {
 	int sig_number;
@@ -130,7 +127,7 @@ void Client::handleCommands()
 {
     try
     {
-        console->handleInput();          // aby nie zezwolić wątkowi na próbę wypisania menu
+        console->handleInput(*this);          // aby nie zezwolić wątkowi na próbę wypisania menu
     }
     catch(std::exception& e) 
     { 
@@ -152,6 +149,13 @@ void Client::handleMessagesfromServer()
         {
             std::cout << "Server disconnected!" << std::endl;
             run_stop_flag = true;
+        }
+        else if(msg.type == 210)
+        {
+            pieceSize = msg.readInt();
+            std::cout << "Piece size set to " << pieceSize << std::endl;
+
+            shareFiles();
         }
     }
     else if(msg_manager.lastReadResult() == 0 || msg_manager.lastReadResult() == -1) //server left
@@ -200,7 +204,7 @@ void Client::shareFile(int socket, std::string directory, std::string fname)
     share_msg.writeInt(fname.size());    //name size
     share_msg.writeString(fname);        //file name
 
-    share_msg.writeInt(999);    //pleceholder for file size
+    share_msg.writeInt((int)fileManager->getFileSize(fname));
 
     for(std::string hash : hashes)
         share_msg.writeString(hash);         //hash for that piece
@@ -210,7 +214,7 @@ void Client::shareFile(int socket, std::string directory, std::string fname)
 
 void Client::shareFiles()
 {
-    std::vector<std::string> file_names = std::move(console->getDirFiles());
+    std::vector<std::string> file_names = std::move(fileManager->getDirFiles());
 
     for(std::string fname : file_names) shareFile(mainServerSocket, "clientFiles", fname);
 }
@@ -238,9 +242,73 @@ void Client::sendFileInfo(int socket, std::string directory, std::string fname)
 
 void Client::sendFilesInfo()
 {
-    std::vector<std::string> file_names = std::move(console->getDirFiles());
+    std::vector<std::string> file_names = std::move(fileManager->getDirFiles());
 
     for(std::string fname : file_names) sendFileInfo(mainServerSocket, "clientFiles", fname);
+}
+
+void Client::sendDeleteBlock(int socket, std::string fileName, int blockIndex)
+{
+    msg::Message deleteBlock(103);
+
+    deleteBlock.writeInt(fileName.size());
+    deleteBlock.writeString(fileName);
+    deleteBlock.writeInt(blockIndex);  
+
+    deleteBlock.sendMessage(socket);        
+}
+
+void Client::sendAskForFile(int socket, std::string fileName)
+{
+    msg::Message askForFile(104);
+
+    askForFile.writeInt(fileName.size());
+    askForFile.writeString(fileName);
+
+    askForFile.sendMessage(socket);
+}
+
+void Client::sendHaveBlock(int socket, std::string fileName, int blockIndex, std::string hash)
+{
+    msg::Message haveBlock(105);
+
+    haveBlock.writeInt(fileName.size());    // file
+    haveBlock.writeString(fileName);
+
+    haveBlock.writeInt(blockIndex);         // block index
+
+    haveBlock.writeInt(hash.size());        // hash
+    haveBlock.writeString(hash);
+
+    haveBlock.sendMessage(socket);
+}
+
+void Client::sendAskForBlock(int socket, std::string fileName, vector<int> blockList)
+{
+    msg::Message askForBlock(106);
+
+    askForBlock.writeInt(fileName.size());    // file
+    askForBlock.writeString(fileName);
+
+    for(auto it = blockList.begin(); it != blockList.end(); ++it) // owned block indexes
+        askForBlock.writeInt(*it);            
+
+    askForBlock.sendMessage(socket);
+}
+
+void Client::sendBadBlockHash(int socket, std::string fileName, int blockIndex, std::string seederAddress)
+{
+    msg::Message badBlockHash(106);
+
+    badBlockHash.writeInt(fileName.size());         // file
+    badBlockHash.writeString(fileName);
+
+    badBlockHash.writeInt(blockIndex);              // block
+
+    badBlockHash.writeInt(seederAddress.size());    // address
+    badBlockHash.writeString(seederAddress);        
+
+    badBlockHash.sendMessage(socket);
 }
 
 void Client::putPiece(std::string fileName, int index, int pieceLength, std::string pieceData) {      //Dla każdego pobieranego pliku tworzy plik.conf
