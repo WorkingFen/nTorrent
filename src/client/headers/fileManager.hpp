@@ -1,6 +1,7 @@
 #ifndef FILEMANAGER_HPP
 #define FILEMANAGER_HPP
 
+#include "client.hpp"
 #include <iostream>
 #include <dirent.h>
 #include <unistd.h>
@@ -9,10 +10,11 @@
 #include <queue>
 #include <sys/stat.h>
 
-class FileManager
+class Client::FileManager
 {
     char fileDirName[1000];
-    DIR *fileDir;
+
+    void removeFileIfFragmented(const std::string& fileName);
 
     public:
     FileManager();
@@ -22,8 +24,10 @@ class FileManager
     void setDir();
     std::vector<std::string> getDirFiles();   
     off_t getFileSize(const std::string& filename); 
-    void putPiece(std::string fileName, int index, int pieceLength, std::string pieceData);        
-
+    void putPiece(Client& client, const std::string& fileName, const int& index, const std::string& pieceData);           // metoda umieszczająca fragment pliku w pliku docelowym i aktualizująca plik konfiguracyjny
+    void createConfig(Client& client, const std::string& fileName, const off_t& fileSize);                 // metoda tworząca plik konfiguracyjny (na jego początku docelowa liczba bloków) oraz plik docelowy, do którego będą umieszczane fragmenty
+    void removeFragmentedFiles();
+    std::vector<char> getBlockBytes(Client& client, const std::string& fileName, const int& index);  
 };
 
 #endif
