@@ -21,7 +21,7 @@ typedef std::unique_ptr<ConsoleInterface> ConsoleInterfacePtr;
 class Client
 {
     private:
-        static const int pieceSize = 10;
+        int pieceSize = 10;
 
         int sockFd, port, clientSocketsNum, serverSocketsNum, maxFd;        // listen socket; przydzielony port efemeryczny; liczba socketów pobierających/wysyłających dane (nie licząc komunikacji z serwerem)
         struct sockaddr_in self, server;
@@ -67,7 +67,7 @@ class Client
         void shareFiles();
         void sendFileInfo(int socket, std::string directory, std::string filename);
         void sendFilesInfo();
-        void putPiece(string fileName, int index, int pieceLength, string pieceData);        
+        void putPiece(std::string fileName, int index, int pieceLength, std::string pieceData);        
 
         void run();                                                   // pętla z selectem
 

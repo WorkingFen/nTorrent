@@ -40,7 +40,9 @@ typedef std::list<int>::iterator cts_list_it;
 
 namespace server {
     class Server{
-        private:    
+        private:
+            static const int pieceSize = 20;
+
             msg::MessageManager msg_manager;
             int listener;               // Server-listener socket
             sockaddr_in server;         // Server IP:port

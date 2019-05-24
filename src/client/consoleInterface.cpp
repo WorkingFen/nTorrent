@@ -52,8 +52,9 @@ void ConsoleInterface::handleInputUp(){
     }   else if(input == "connect")
     {
         client.connectTo(client.getServer());
-        //calculateHashes();
-        client.shareFiles();
+
+        //wait for 210 before anything else
+
         state = State::connected;
     }   else if (input == "quit")
     {
@@ -185,10 +186,11 @@ State ConsoleInterface::getState(){
 off_t ConsoleInterface::getFileSize(const std::string& filename)
 {
     struct stat fileStats;
-    char* filePath = strcat(fileDirName,"/");
-    filePath = strcat(filePath, filename.c_str());
+    std::string filePath(fileDirName);
+    filePath = filePath + "/" + filename;
 
-    if(stat(filePath, &fileStats) == -1)
+    std::cout << "Filepath w tej metodzie: " << filePath << std::endl;
+    if(stat(filePath.c_str(), &fileStats) == -1)
         throw std::runtime_error("Error while retrieving info about file!");
     
     return fileStats.st_size;

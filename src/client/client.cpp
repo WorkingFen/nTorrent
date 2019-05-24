@@ -153,6 +153,13 @@ void Client::handleMessagesfromServer()
             std::cout << "Server disconnected!" << std::endl;
             run_stop_flag = true;
         }
+        else if(msg.type == 210)
+        {
+            pieceSize = msg.readInt();
+            std::cout << "Piece size set to " << pieceSize << std::endl;
+
+            shareFiles();
+        }
     }
     else if(msg_manager.lastReadResult() == 0 || msg_manager.lastReadResult() == -1) //server left
     {
@@ -200,7 +207,7 @@ void Client::shareFile(int socket, std::string directory, std::string fname)
     share_msg.writeInt(fname.size());    //name size
     share_msg.writeString(fname);        //file name
 
-    share_msg.writeInt(999);    //pleceholder for file size
+    share_msg.writeInt((int)console->getFileSize(fname));
 
     for(std::string hash : hashes)
         share_msg.writeString(hash);         //hash for that piece
@@ -253,7 +260,7 @@ void Client::putPiece(string fileName, int index, int pieceLength, string pieceD
 	filePieces.seekp(long(offset), std::ios_base::beg);
 
 	filePieces << pieceData;
-''
+
 	filePieces.close();
 
 	string fileConfigName = fileName;

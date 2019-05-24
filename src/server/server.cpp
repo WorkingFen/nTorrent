@@ -141,6 +141,10 @@ void server::Server::accept_srv() {
         }
         else {
 
+        msg::Message hello(210);
+        hello.writeInt(pieceSize);
+        hello.sendMessage(ct_socket);
+
 #ifdef CTNAME
             memset(host, 0, NI_MAXHOST);
             memset(svc, 0, NI_MAXSERV);
