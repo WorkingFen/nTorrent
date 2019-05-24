@@ -63,6 +63,9 @@ void ConsoleInterface::handleInputConnected(){
     }   else if (input == "quit")
     {
         state = State::down;
+    }   else if (input == "file_download")
+    {
+        state = State::down;
     }   else
     {
         cout << "Nieprawidlowa komenda! Wpisz 'help', aby zobaczyc liste komend." << endl;
