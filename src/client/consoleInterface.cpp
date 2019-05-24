@@ -60,7 +60,7 @@ void Client::ConsoleInterface::handleInputConnected(Client& client, std::vector<
         cout << "Jestes juz polaczony!" << endl;
     }   else if(input[0] == "ls")
     {
-        client.printFolderContent();
+        client.fileManager->printFolderContent();
     }   else if (input[0] == "quit")
     {
         state = State::down;

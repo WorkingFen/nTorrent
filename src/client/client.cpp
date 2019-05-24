@@ -83,11 +83,6 @@ const struct sockaddr_in& Client::getServer() const
     return server;
 }
 
-void Client::printFolderContent()
-{
-    fileManager->printFolderContent();
-}
-
 void Client::signal_waiter()
 {
 	int sig_number;

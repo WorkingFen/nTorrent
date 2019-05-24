@@ -62,7 +62,6 @@ class Client
 
         const struct sockaddr_in& getServer() const;
 
-        void printFolderContent();
         void shareFile(int socket, std::string directory, std::string fname);
         void shareFiles();
         void sendFileInfo(int socket, std::string directory, std::string filename);
