@@ -315,7 +315,7 @@ void Client::putPiece(std::string fileName, int index, int pieceLength, std::str
     // co jak zabijemy proces i zostanie plik.conf i pofragmentowany plik?
     // można na starcie programu czyścić katalogi z tymi plikami
 
-	std::ofstream filePieces(fileName.c_str());
+	std::fstream filePieces(fileName.c_str());
 
 	off_t offset = index * pieceLength;
 	filePieces.seekp(long(offset), std::ios_base::beg);
