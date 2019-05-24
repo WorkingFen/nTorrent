@@ -26,35 +26,31 @@ void server::Server::shutdown() {
     memset(host, 0, NI_MAXHOST);
     memset(svc, 0, NI_MAXSERV);
 #endif
-    memset(msg_buf, 0, sizeof(msg_buf));
-    while(clients_sockets.size() != 0) {
-        cts_it = clients_sockets.begin();
+    while(clients.size() != 0) {
+        cts_it = clients.begin();
         close_ct();
     }
     close(listener);
 }
 
-server::file& server::Server::add_file(std::string name, int size) {
+server::file server::Server::add_file(std::string name, int size) {
     for(auto i : files) if(i.name == name) return i;
 
-    file tmp;
-    tmp.name = name;
+    file tmp(name,size);
     files.push_back(tmp);
     return tmp;
 }
 
-server::block& server::Server::add_block(server::file& foo, int no, std::string hash) {
+server::block server::Server::add_block(server::file& foo, int no, std::string hash) {
     for(auto i : foo.blocks) if(i.hash == hash) return i;
 
-    block tmp;
-    tmp.no = no;
-    tmp.hash = hash;
+    block tmp(no, hash);
     foo.blocks.push_back(tmp);
     return tmp;
 }
 
-void server::Server::add_owner(server::block& foo, int owner) {
-    for(auto i : foo.owners) if(i == owner) return;
+void server::Server::add_owner(server::block& foo, server::client owner) {
+    for(auto i : foo.owners) if(i.socket == owner.socket) return;
 
     foo.owners.push_back(owner);
 }
@@ -63,7 +59,7 @@ server::Server::Server(const char srv_ip[15], const int& srv_port) : sigint_flag
     set_SIGmask();
     signal_thread = std::thread(&Server::signal_waiter, this);
 
-    timeout.tv_sec = 1;
+    timeout.tv_sec = 120;
     timeout.tv_usec = 0;
     
     socket_srv();
@@ -120,8 +116,8 @@ void server::Server::select_cts() {
     FD_ZERO(&bits_fd);
     FD_SET(listener, &bits_fd);
 
-    for(auto i : clients_sockets)
-        FD_SET(i, &bits_fd);
+    for(auto i : clients)
+        FD_SET(i.socket, &bits_fd);
 
     if(select(max_fd, &bits_fd, (fd_set*)0, (fd_set*)0, &timeout) == -1)
         throw std::runtime_error("Select call failed");
@@ -130,25 +126,26 @@ void server::Server::select_cts() {
 // Accept new client
 void server::Server::accept_srv() {
     if(FD_ISSET(listener, &bits_fd)){
-        sockaddr_in client;
-        socklen_t client_size = sizeof(client);
-        int ct_socket = accept(listener, (sockaddr*)&client, &client_size);
-        clients_sockets.push_back(ct_socket);
+        sockaddr_in ct_addr;
+        socklen_t client_size = sizeof(ct_addr);
+        int ct_socket = accept(listener, (sockaddr*)&ct_addr, &client_size);
+        client ct(ct_addr, ct_socket);
+        clients.push_back(ct);
         max_fd = std::max(max_fd, ct_socket+1);
 
-        if(clients_sockets.back() == -1)
+        if(clients.back().socket == -1)
             throw std::runtime_error("Problem with client connecting");
         else {
 #ifdef CTNAME
             memset(host, 0, NI_MAXHOST);
             memset(svc, 0, NI_MAXSERV);
 
-            if(getnameinfo((sockaddr*)&client, sizeof(client), host, NI_MAXHOST, svc, NI_MAXSERV, 0)) {
+            if(getnameinfo((sockaddr*)&ct_addr, sizeof(ct_addr), host, NI_MAXHOST, svc, NI_MAXSERV, 0)) {
                 std::cout << host << " connected on " << svc << std::endl;
             }
             else {
-                inet_ntop(AF_INET, &client.sin_addr, host, NI_MAXHOST);
-                std::cout << host << " connected on " << ntohs(client.sin_port) << std::endl;
+                inet_ntop(AF_INET, &ct_addr.sin_addr, host, NI_MAXHOST);
+                std::cout << host << " connected on " << ntohs(ct_addr.sin_port) << std::endl;
             }
 #endif
         }
@@ -157,9 +154,9 @@ void server::Server::accept_srv() {
 
 // Check clients' messages
 void server::Server::check_cts() {
-    for(cts_it = clients_sockets.begin(); cts_it != clients_sockets.end(); ) {
-        if(FD_ISSET(*cts_it, &bits_fd)) {
-            int bytes_rcv = read_srv(msg_buf);
+    for(cts_it = clients.begin(); cts_it != clients.end(); ) {
+        if(FD_ISSET(cts_it->socket, &bits_fd)) {
+            int bytes_rcv = read_srv();
             if(bytes_rcv == SRVERROR || bytes_rcv == SRVNOCONN) {
                 close_ct();
                 continue;
@@ -172,16 +169,18 @@ void server::Server::check_cts() {
 // Write new message to client with ID: client_id
 int server::Server::write_srv(const void* buffer, size_t msg_size) {
     // TODO: Depending on Message
-    if(send(*cts_it, buffer, msg_size, 0) == -1) return SRVERROR;
+    if(send(cts_it->socket, buffer, msg_size, 0) == -1) return SRVERROR;
     else return SRVNORM;
 }
 
 // Read message from client with ID: client_id
-int server::Server::read_srv(char* buffer) {
-    if(!msg_manager.assembleMsg(*cts_it))
-        return msg_manager.lastReadResult();
+int server::Server::read_srv() {
+    if(!msg_manager.assembleMsg(cts_it->socket)) {
+        if(msg_manager.lastReadResult()<=0) return SRVERROR;
+        else return SRVNORM;
+    }
 
-    msg::Message msg = msg_manager.readMsg(*cts_it);
+    msg::Message msg = msg_manager.readMsg(cts_it->socket);
 
     if(msg.type == -1) {
 #ifdef LOGS
@@ -199,13 +198,24 @@ int server::Server::read_srv(char* buffer) {
         }
 #ifdef LOGS
         std::cout << std::endl << "Message type: " << msg.type << std::endl;
+        std::cout << "Name size: " << name_size << std::endl;
         std::cout << "File name: " << foo.name << std::endl;
         std::cout << "File size: " << foo.size << std::endl;
         for(auto i : foo.blocks)
             std::cout << "Piece hash: " << i.hash << std::endl;
+        for(auto i : files) {
+            std::cout << std::endl << std::endl << i.name << " " << i.size << std::endl;
+            int no = 0;
+            for(auto j : i.blocks) {
+                std::cout << no << ". : " << j.hash << std::endl;
+                no++;
+                for(auto k : j.owners) 
+                    std::cout << "- " << k.socket << std::endl;
+            }
+        }
 #endif
     }
-    else if(msg.type == 102) {
+    /*else if(msg.type == 102) {
         msg::Message file_list(203);   // TODO
 
         for(auto i : files) {
@@ -272,10 +282,10 @@ int server::Server::read_srv(char* buffer) {
         std::cout << "File size: " << msg.readInt() << std::endl;
         while(msg.buf_length > 0)
             std::cout << "Piece hash: " << msg.readString(64) << std::endl;
-    }
+    }*/
     else if(msg.type == 110) {
 #ifdef LOGS
-        std::cout << std::endl << "KeepAlive: on socket number " << *cts_it << std::endl;
+        std::cout << std::endl << "KeepAlive: on socket number " << cts_it->socket << std::endl;
 #endif
     }
     else if(msg.type == 111) {
@@ -285,13 +295,16 @@ int server::Server::read_srv(char* buffer) {
         return SRVNOCONN;
     }
     else {
+#ifdef LOGS
         std::cout << "Received: " << msg.type << std::endl;
+        std::cout << "Message type is unknown" << std::endl;
         std::cout << "Message: ";
         for(char c : msg.buffer) std::cout << c;
         std::cout << std::endl;
         std::cout << "Message bytes: " << std::endl;
         for(char c : msg.buffer) std::cout << static_cast<int>(c) << " ";
         std::cout << std::endl;
+#endif
     }
 
     return SRVNORM;
@@ -299,9 +312,21 @@ int server::Server::read_srv(char* buffer) {
 
 // Close connection with client whose ID: client_id
 void server::Server::close_ct() {
-    if(close(*cts_it) == -1)
+#ifdef LOGS
+    memset(host, 0, NI_MAXHOST);
+    memset(svc, 0, NI_MAXSERV);
+
+    if(getnameinfo((sockaddr*)&(cts_it->address), sizeof(cts_it->address), host, NI_MAXHOST, svc, NI_MAXSERV, 0)) {
+        std::cout << "Closing socket of: " << host << ":" << svc << std::endl;
+    }
+    else {
+        inet_ntop(AF_INET, &(cts_it->address).sin_addr, host, NI_MAXHOST);
+        std::cout << "Closing socket of: " << host << ":" << ntohs(cts_it->address.sin_port) << std::endl;
+    }
+#endif
+    if(close(cts_it->socket) == -1)
         throw std::runtime_error("Couldn't close client's socket");
-    else cts_it = clients_sockets.erase(cts_it);
+    else cts_it = clients.erase(cts_it);
 }
 
 server::Server::~Server() {
