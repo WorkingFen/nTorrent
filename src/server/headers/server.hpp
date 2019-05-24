@@ -17,7 +17,7 @@
 #include "../../message/message.hpp"
 
 #define SRVNOCONN 404
-#define SRVNORM 0
+#define SRVNORM 1
 #define SRVERROR -1
 
 #define LOGS
@@ -34,53 +34,67 @@
     #ifndef CTNAME
         #define CTNAME
     #endif
+    #ifndef KEEPALIVE
+        #define KEEPALIVE
+    #endif
 #endif
 
-typedef std::list<int> cts_list;
-typedef std::list<int>::iterator cts_list_it; 
-
 namespace server {
+    struct client {
+        sockaddr_in address;            // Client IP:port
+        int socket;                     // Client's socket
+        int no_leeches;                 // Number of active leeches
+        int timeout;                    // Time after which connection should end   // ?
+
+        client() {}
+        client(sockaddr_in addr, int s, int t = 0, int nl = 0): 
+            address(addr), socket(s), no_leeches(nl), timeout(t) {}
+    };
+
+typedef std::list<client> cts_list;
+typedef std::list<client>::iterator cts_list_it;
+
     struct block {
-        int no;                         // Number of block
         std::string hash;               // Block hash
-        cts_list owners;                // Vector of clients who do have this block
+        std::vector<client> owners;     // Vector of clients who do have this block
+
+        block() {}
+        block(std::string h): hash(h) {}
     };
     
     struct file {
-        int size;                       // Size of file
         std::string name;               // Name of file
+        int size;                       // Size of file
         std::vector<block> blocks;      // Vector of blocks
-    };
 
-    struct client {
-        char ip[15];                    // IP address 
-        int port;                       // Port
-        int socket;                     // Client's socket
-        int timeout;                    // Time after which connection should end
-        int no_leeches;                 // Number of active leeches
-    };
+        file() {}
+        file(std::string n, int s): name(n), size(s) {}
+    }; 
 
-    class Server{
+    class Server {
         private:
             static const int pieceSize = 20;
 
+            sockaddr_in server;                     // Server IP:port
+            int listener;                           // Server-listener socket
+
+            cts_list clients;                       // List of clients
+            cts_list_it cts_it;                     // Iterator of clients' list
+
+            fd_set bits_fd;                         // Bits for file descriptors
+            int max_fd;                             // Max file descriptor number
+
+            timeval timeout;                        // Timeout for select_ct()          // ?
+            
+            std::map<std::string, file> files;      // Vector of files
             msg::MessageManager msg_manager;
-            int listener;               // Server-listener socket
-            sockaddr_in server;         // Server IP:port
-            char msg_buf[4096];         // Buffer for messages
-            cts_list clients_sockets;   // List of clients' sockets
-            cts_list_it cts_it;         // Iterator of clients' list
-            int max_fd;                 // Max file descriptor number
-            timeval timeout;            // Timeout for select_ct()
-            fd_set bits_fd;             // Bits for file descriptors
-            std::vector<file> files;    // Vector of files
 #ifdef CTNAME
             char host[NI_MAXHOST];
             char svc[NI_MAXSERV];
 #endif
-            std::thread signal_thread;  // Thread for signal handling
-            sigset_t signal_set;        // Signal which should be used for set_SIGmask
-            bool sigint_flag;           // Signal of ctrl+C usage
+            std::thread signal_thread;      // Thread for signal handling
+            sigset_t signal_set;            // Signal which should be used for set_SIGmask
+            bool sigint_flag;               // Signal of ctrl+C usage
             void signal_waiter(); 
             void set_SIGmask();
             void shutdown();
@@ -89,17 +103,17 @@ namespace server {
             Server(const char srv_ip[15], const int& srv_port);
             ~Server();
 
-            file& add_file(std::string, int);
-            block& add_block(file&, int, std::string);
-            void add_owner(block&, int);
+            file* add_file(std::string);
+            file* add_file(int, std::string);
+            block* add_block(file&, std::string);
+            bool add_block(file&, std::string, uint);
+            void add_owner(block&, client);
 
-            file& get_file();
-            block& get_block();
-            client& get_owner();
+            block* get_block(file&, uint);
 
-            void delete_file();
-            void delete_block();
-            void delete_owner();
+            void delete_file(std::map<std::string, server::file>::iterator);
+            bool delete_block(file&, int);
+            bool delete_owner(block&);
 
             void socket_srv();
             void bind_srv(const char srv_ip[15], const int& srv_port);
@@ -107,8 +121,7 @@ namespace server {
             void select_cts();
             void accept_srv();
             void check_cts();
-            int write_srv(const void* buffer, size_t msg_size);
-            int read_srv(char* buffer);
+            int read_srv();
             void close_ct();
     };
 }
