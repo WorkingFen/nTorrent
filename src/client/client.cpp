@@ -260,6 +260,70 @@ void Client::sendFilesInfo()
     for(std::string fname : file_names) sendFileInfo(mainServerSocket, "clientFiles", fname);
 }
 
+void Client::sendDeleteBlock(int socket, std::string fileName, int blockIndex)
+{
+    msg::Message deleteBlock(103);
+
+    deleteBlock.writeInt(fileName.size());
+    deleteBlock.writeString(fileName);
+    deleteBlock.writeInt(blockIndex);  
+
+    deleteBlock.sendMessage(socket);        
+}
+
+void Client::sendAskForFile(int socket, std::string fileName)
+{
+    msg::Message askForFile(104);
+
+    askForFile.writeInt(fileName.size());
+    askForFile.writeString(fileName);
+
+    askForFile.sendMessage(socket);
+}
+
+void Client::sendHaveBlock(int socket, std::string fileName, int blockIndex, std::string hash)
+{
+    msg::Message haveBlock(105);
+
+    haveBlock.writeInt(fileName.size());    // file
+    haveBlock.writeString(fileName);
+
+    haveBlock.writeInt(blockIndex);         // block index
+
+    haveBlock.writeInt(hash.size());        // hash
+    haveBlock.writeString(hash);
+
+    haveBlock.sendMessage(socket);
+}
+
+void Client::sendAskForBlock(int socket, std::string fileName, vector<int> blockList)
+{
+    msg::Message askForBlock(106);
+
+    askForBlock.writeInt(fileName.size());    // file
+    askForBlock.writeString(fileName);
+
+    for(auto it = blockList.begin(); it != blockList.end(); ++it) // owned block indexes
+        askForBlock.writeInt(*it);            
+
+    askForBlock.sendMessage(socket);
+}
+
+void Client::sendBadBlockHash(int socket, std::string fileName, int blockIndex, std::string seederAddress)
+{
+    msg::Message badBlockHash(106);
+
+    badBlockHash.writeInt(fileName.size());         // file
+    badBlockHash.writeString(fileName);
+
+    badBlockHash.writeInt(blockIndex);              // block
+
+    badBlockHash.writeInt(seederAddress.size());    // address
+    badBlockHash.writeString(seederAddress);        
+
+    badBlockHash.sendMessage(socket);
+}
+
 void Client::putPiece(std::string fileName, int index, int pieceLength, std::string pieceData) {      //Dla każdego pobieranego pliku tworzy plik.conf
     // co jak zabijemy proces i zostanie plik.conf i pofragmentowany plik?
     // można na starcie programu czyścić katalogi z tymi plikami
