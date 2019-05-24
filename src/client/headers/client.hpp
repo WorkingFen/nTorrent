@@ -12,11 +12,14 @@
 #include <thread>
 #include <memory>
 #include "consoleInterface.hpp"
+#include "fileManager.hpp"
 #include "../../message/message.hpp"
 
 class ConsoleInterface;
+class FileManager;
 
 typedef std::unique_ptr<ConsoleInterface> ConsoleInterfacePtr;
+typedef std::unique_ptr<FileManager> FileManagerPtr;
 
 class Client
 {
@@ -35,7 +38,8 @@ class Client
         std::thread input;
         msg::MessageManager msg_manager;
         ConsoleInterfacePtr console;
-    
+        FileManagerPtr fileManager;
+
         std::thread signal_thread;              
         sigset_t signal_set;					// do ustawienia sigmask
         bool interrupted_flag = false;			// sygnalizuje użycie Ctrl+C
@@ -61,8 +65,11 @@ class Client
         void connectTo(const struct sockaddr_in &server);             // łączy się z klientem o podanym adresie (serwer powinien przesyłać gotową strukturę do klienta) lub z serwerem torrent
 
         const struct sockaddr_in& getServer() const;
-        void setConsoleInterface(ConsoleInterfacePtr& x);
 
+        void setConsoleInterface(ConsoleInterfacePtr& x);
+        void setFileManager(FileManagerPtr& x);
+
+        void printFolderContent();
         void shareFile(int socket, std::string directory, std::string fname);
         void shareFiles();
         void sendFileInfo(int socket, std::string directory, std::string filename);

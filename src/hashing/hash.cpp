@@ -34,10 +34,10 @@ vector<string> hashPieces(string fileName, int pieceLength) {
     */
 
 	ifstream is(fileName.c_str(), ios::in | ios::binary | ios::ate);
-	int fileLength = is.tellg();
+	off_t fileLength = is.tellg();
 	is.seekg(0, is.beg);
 
-	int piecesCount = int(ceil(double(fileLength) / double(pieceLength)));
+	int piecesCount = int(ceil(fileLength / double(pieceLength)));
 
 	vector<string> hashes;
 

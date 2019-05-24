@@ -13,6 +13,7 @@
 #include <stdexcept>
 #include <thread>
 #include <signal.h>
+#include <chrono>
 #include "../../message/message.hpp"
 
 #define SRVNOCONN 404
@@ -39,6 +40,26 @@ typedef std::list<int> cts_list;
 typedef std::list<int>::iterator cts_list_it; 
 
 namespace server {
+    struct block {
+        int no;                         // Number of block
+        std::string hash;               // Block hash
+        cts_list owners;                // Vector of clients who do have this block
+    };
+    
+    struct file {
+        int size;                       // Size of file
+        std::string name;               // Name of file
+        std::vector<block> blocks;      // Vector of blocks
+    };
+
+    struct client {
+        char ip[15];                    // IP address 
+        int port;                       // Port
+        int socket;                     // Client's socket
+        int timeout;                    // Time after which connection should end
+        int no_leeches;                 // Number of active leeches
+    };
+
     class Server{
         private:
             static const int pieceSize = 20;
@@ -51,7 +72,8 @@ namespace server {
             cts_list_it cts_it;         // Iterator of clients' list
             int max_fd;                 // Max file descriptor number
             timeval timeout;            // Timeout for select_ct()
-            fd_set bits_fd;             // Bits for file descriptors 
+            fd_set bits_fd;             // Bits for file descriptors
+            std::vector<file> files;    // Vector of files
 #ifdef CTNAME
             char host[NI_MAXHOST];
             char svc[NI_MAXSERV];
@@ -66,6 +88,18 @@ namespace server {
         public:
             Server(const char srv_ip[15], const int& srv_port);
             ~Server();
+
+            file& add_file(std::string, int);
+            block& add_block(file&, int, std::string);
+            void add_owner(block&, int);
+
+            file& get_file();
+            block& get_block();
+            client& get_owner();
+
+            void delete_file();
+            void delete_block();
+            void delete_owner();
 
             void socket_srv();
             void bind_srv(const char srv_ip[15], const int& srv_port);

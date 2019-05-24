@@ -86,6 +86,16 @@ void Client::setConsoleInterface(ConsoleInterfacePtr& x)
     console = std::move(x);
 }
 
+void Client::setFileManager(FileManagerPtr& x)
+{
+    fileManager = std::move(x);
+}
+
+void Client::printFolderContent()
+{
+    fileManager->printFolderContent();
+}
+
 void Client::signal_waiter()
 {
 	int sig_number;
@@ -207,7 +217,7 @@ void Client::shareFile(int socket, std::string directory, std::string fname)
     share_msg.writeInt(fname.size());    //name size
     share_msg.writeString(fname);        //file name
 
-    share_msg.writeInt((int)console->getFileSize(fname));
+    share_msg.writeInt((int)fileManager->getFileSize(fname));
 
     for(std::string hash : hashes)
         share_msg.writeString(hash);         //hash for that piece
@@ -217,7 +227,7 @@ void Client::shareFile(int socket, std::string directory, std::string fname)
 
 void Client::shareFiles()
 {
-    std::vector<std::string> file_names = std::move(console->getDirFiles());
+    std::vector<std::string> file_names = std::move(fileManager->getDirFiles());
 
     for(std::string fname : file_names) shareFile(mainServerSocket, "clientFiles", fname);
 }
@@ -245,18 +255,18 @@ void Client::sendFileInfo(int socket, std::string directory, std::string fname)
 
 void Client::sendFilesInfo()
 {
-    std::vector<std::string> file_names = std::move(console->getDirFiles());
+    std::vector<std::string> file_names = std::move(fileManager->getDirFiles());
 
     for(std::string fname : file_names) sendFileInfo(mainServerSocket, "clientFiles", fname);
 }
 
-void Client::putPiece(string fileName, int index, int pieceLength, string pieceData) {      //Dla każdego pobieranego pliku tworzy plik.conf
+void Client::putPiece(std::string fileName, int index, int pieceLength, std::string pieceData) {      //Dla każdego pobieranego pliku tworzy plik.conf
     // co jak zabijemy proces i zostanie plik.conf i pofragmentowany plik?
     // można na starcie programu czyścić katalogi z tymi plikami
 
 	std::ofstream filePieces(fileName.c_str());
 
-	int offset = index * pieceLength;
+	off_t offset = index * pieceLength;
 	filePieces.seekp(long(offset), std::ios_base::beg);
 
 	filePieces << pieceData;
