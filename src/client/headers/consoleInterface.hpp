@@ -29,14 +29,15 @@ class ConsoleInterface
     std::vector<char> buffer;
     std::queue<std::string> commandQueue;
 
-    void handleInputUp();
-    void handleInputConnected();
+    void handleInputUp(std::vector<std::string> input);
+    void handleInputConnected(std::vector<std::string> input);
 
     public:
     ConsoleInterface(Client& c);
     ~ConsoleInterface();
 
     void processCommands(const char* buf);
+    std::vector<std::string> splitBySpace(std::string input);       // pewnie powinno być w jakimś utils.h
     void handleInput();
 
     void stopSeeding();

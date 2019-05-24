@@ -1,5 +1,6 @@
 #include "headers/consoleInterface.hpp"
 #include "../hashing/headers/hash.h"
+#include <sstream>
 using std::cout;
 using std::endl;
 using std::string;
@@ -10,10 +11,10 @@ ConsoleInterface::ConsoleInterface(Client& c): client(c), state(State::up) {}
 
 ConsoleInterface::~ConsoleInterface() {}
 
-void ConsoleInterface::handleInputUp(){
-    std::string input=commandQueue.front();
-    commandQueue.pop();
-    if(input == "help")
+void ConsoleInterface::handleInputUp(std::vector<std::string> input){
+
+
+    if(input[0] == "help")
     {
         cout << "Lista komend:" << endl
         << "help - wypisz liste dostepnych komend" << endl
@@ -21,13 +22,13 @@ void ConsoleInterface::handleInputUp(){
         << "ls - pokaz zawartosc katalogu z plikami, ktore udostepniasz (wymagane polaczenie z serwerem)" << endl
         << "disconnect - rozlacz sie z serwerem" << endl
         << "quit - wylacz program" << endl;
-    }   else if(input == "connect")
+    }   else if(input[0] == "connect")
     {
         client.connectTo(client.getServer());
         //calculateHashes();
         client.shareFiles();
         state = State::connected;
-    }   else if (input == "quit")
+    }   else if (input[0] == "quit")
     {
         state = State::down;
     }   else
@@ -43,10 +44,9 @@ void ConsoleInterface::handleInputUp(){
     5. Zakończ udostępniać plik
 
 */
-void ConsoleInterface::handleInputConnected(){
-    std::string input=commandQueue.front();
-    commandQueue.pop();
-    if(input == "help")
+void ConsoleInterface::handleInputConnected(std::vector<std::string> input){
+
+    if(input[0] == "help")
     {
         cout << "Lista komend:" << endl
         << "help - wypisz liste dostepnych komend" << endl
@@ -54,16 +54,16 @@ void ConsoleInterface::handleInputConnected(){
         << "ls - pokaz zawartosc katalogu z plikami, ktore udostepniasz (wymagane polaczenie z serwerem)" << endl
         << "disconnect - rozlacz sie z serwerem" << endl
         << "quit - wylacz program" << endl;
-    }   else if(input == "connect")
+    }   else if(input[0] == "connect")
     {
         cout << "Jestes juz polaczony!" << endl;
-    }   else if(input == "ls")
+    }   else if(input[0] == "ls")
     {
         client.printFolderContent();
-    }   else if (input == "quit")
+    }   else if (input[0] == "quit")
     {
         state = State::down;
-    }   else if (input == "file_download")
+    }   else if (input[0] == "file_download")
     {
         state = State::down;
     }   else
@@ -120,12 +120,29 @@ void ConsoleInterface::processCommands(const char* buf)
     }
 }
 
+std::vector<std::string> ConsoleInterface::splitBySpace(std::string input)
+{
+    std::string buf;
+    std::stringstream ss(input);
+
+    std::vector<std::string> tokens;
+
+    while (ss >> buf)
+        tokens.push_back(buf);
+
+    return tokens;
+}
+
 void ConsoleInterface::handleInput()
 {
     if(!commandQueue.empty())
     {
-        if(state == State::up)  handleInputUp();
-        else if(state == State::connected || state == State::seeding || state == State::seeding || state == State::both) handleInputConnected(); // prawie takie same
+        std::string input=commandQueue.front();
+        commandQueue.pop();
+        vector<std::string> tokens = splitBySpace(input);
+        
+        if(state == State::up)  handleInputUp(tokens);
+        else if(state == State::connected || state == State::seeding || state == State::seeding || state == State::both) handleInputConnected(tokens); // prawie takie same
     }
 }
 

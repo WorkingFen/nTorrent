@@ -77,7 +77,7 @@ class Client
         void sendDeleteBlock(int socket, std::string fileName, int blockIndex);
         void sendAskForFile(int socket, std::string fileName);
         void sendHaveBlock(int socket, std::string fileName, int blockIndex, std::string hash);
-        void sendAskForBlock(int socket, std::string fileName, vector<int> blockList);
+        void sendAskForBlock(int socket, std::string fileName, std::vector<int> blockList);
         void sendBadBlockHash(int socket, std::string fileName, int blockIndex, std::string seederAdress);
 
         void putPiece(std::string fileName, int index, int pieceLength, std::string pieceData);        
