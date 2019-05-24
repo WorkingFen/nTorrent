@@ -139,6 +139,11 @@ void server::Server::accept_srv() {
         if(clients_sockets.back() == -1)
             throw std::runtime_error("Problem with client connecting");
         else {
+
+        msg::Message hello(210);
+        hello.writeInt(pieceSize);
+        hello.sendMessage(ct_socket);
+
 #ifdef CTNAME
             memset(host, 0, NI_MAXHOST);
             memset(svc, 0, NI_MAXSERV);
@@ -191,20 +196,20 @@ int server::Server::read_srv(char* buffer) {
     }
     else if(msg.type == 101) {
         int name_size = msg.readInt();
-        file foo = add_file(msg.readString(name_size), msg.readInt());
+        /*file foo = add_file(msg.readString(name_size), msg.readInt());
         block bar;
         for(int i = 0; msg.buf_length > 0; i++) {
             bar = add_block(foo, i, msg.readString(64));
             add_owner(bar, *cts_it);
-        }
+        }*/
 #ifdef LOGS
         std::cout << std::endl << "Message type: " << msg.type << std::endl;
-        std::cout << "File name: " << foo.name << std::endl;
-        std::cout << "File size: " << foo.size << std::endl;
-        for(auto i : foo.blocks)
-            std::cout << "Piece hash: " << i.hash << std::endl;
+        std::cout << "File name: " << msg.readString(name_size) << std::endl;
+        std::cout << "File size: " << msg.readInt() << std::endl;
+        while(msg.buf_length >= 64)
+            std::cout << "Piece hash: " << msg.readString(64) << std::endl;
 #endif
-    }
+    }/*
     else if(msg.type == 102) {
         msg::Message file_list(203);   // TODO
 
@@ -247,7 +252,7 @@ int server::Server::read_srv(char* buffer) {
         std::cout << "Piece number: " << bar.no << std::endl;
         std::cout << "Piece hash: " << bar.hash << std::endl;
 #endif
-    }
+    }*/
     else if(msg.type == 106) {
 // TODO: ????
         int name_size = msg.readInt();

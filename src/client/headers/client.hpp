@@ -20,7 +20,7 @@ class Client
 {
     private:
         class ConsoleInterface;
-        static const int pieceSize = 10;
+        int pieceSize = 10;
 
         int sockFd, port, clientSocketsNum, serverSocketsNum, maxFd;        // listen socket; przydzielony port efemeryczny; liczba socketów pobierających/wysyłających dane (nie licząc komunikacji z serwerem)
         struct sockaddr_in self, server;

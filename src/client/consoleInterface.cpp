@@ -25,8 +25,9 @@ void Client::ConsoleInterface::handleInputUp(Client& client, std::vector<std::st
     }   else if(input[0] == "connect")
     {
         client.connectTo(client.getServer());
-        //calculateHashes();
-        client.shareFiles();
+
+        //wait for 210 before anything else
+
         state = State::connected;
     }   else if (input[0] == "quit")
     {
