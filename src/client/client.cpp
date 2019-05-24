@@ -8,9 +8,11 @@
 #include <ctime>
 #include <fstream>
 
+#include "headers/consoleInterface.hpp"
+
 using namespace msg;
 
-Client::Client(const char ipAddr[15], const int& port, const char serverIpAddr[15], const int& serverPort) : clientSocketsNum(0), serverSocketsNum(0), maxFd(0)
+Client::Client(const char ipAddr[15], const int& port, const char serverIpAddr[15], const int& serverPort) : clientSocketsNum(0), serverSocketsNum(0), maxFd(0), console(std::unique_ptr<ConsoleInterface>(new ConsoleInterface)), fileManager(FileManagerPtr(new FileManager))
 {
     prepareSockaddrStruct(self, ipAddr, port);
     prepareSockaddrStruct(server, serverIpAddr, serverPort);
@@ -81,16 +83,6 @@ const struct sockaddr_in& Client::getServer() const
     return server;
 }
 
-void Client::setConsoleInterface(ConsoleInterfacePtr& x)
-{
-    console = std::move(x);
-}
-
-void Client::setFileManager(FileManagerPtr& x)
-{
-    fileManager = std::move(x);
-}
-
 void Client::printFolderContent()
 {
     fileManager->printFolderContent();
@@ -140,7 +132,7 @@ void Client::handleCommands()
 {
     try
     {
-        console->handleInput();          // aby nie zezwolić wątkowi na próbę wypisania menu
+        console->handleInput(*this);          // aby nie zezwolić wątkowi na próbę wypisania menu
     }
     catch(std::exception& e) 
     { 

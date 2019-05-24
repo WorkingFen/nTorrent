@@ -7,11 +7,11 @@ using std::string;
 using std::vector;
 
 
-ConsoleInterface::ConsoleInterface(Client& c): client(c), state(State::up) {}
+Client::ConsoleInterface::ConsoleInterface(): state(State::up) {}
 
-ConsoleInterface::~ConsoleInterface() {}
+Client::ConsoleInterface::~ConsoleInterface() {}
 
-void ConsoleInterface::handleInputUp(std::vector<std::string> input){
+void Client::ConsoleInterface::handleInputUp(Client& client, std::vector<std::string> input){
 
 
     if(input[0] == "help")
@@ -44,7 +44,7 @@ void ConsoleInterface::handleInputUp(std::vector<std::string> input){
     5. Zakończ udostępniać plik
 
 */
-void ConsoleInterface::handleInputConnected(std::vector<std::string> input){
+void Client::ConsoleInterface::handleInputConnected(Client& client, std::vector<std::string> input){
 
     if(input[0] == "help")
     {
@@ -103,7 +103,7 @@ void ConsoleInterface::handleInputConnected(std::vector<std::string> input){
 */
 }
 
-void ConsoleInterface::processCommands(const char* buf)
+void Client::ConsoleInterface::processCommands(const char* buf)
 {
     buffer.insert(buffer.end(), buf, buf+strlen(buf));
     for(auto it = buffer.begin(); it!=buffer.end();)
@@ -120,7 +120,7 @@ void ConsoleInterface::processCommands(const char* buf)
     }
 }
 
-std::vector<std::string> ConsoleInterface::splitBySpace(std::string input)
+std::vector<std::string> Client::ConsoleInterface::splitBySpace(std::string input)
 {
     std::string buf;
     std::stringstream ss(input);
@@ -133,7 +133,7 @@ std::vector<std::string> ConsoleInterface::splitBySpace(std::string input)
     return tokens;
 }
 
-void ConsoleInterface::handleInput()
+void Client::ConsoleInterface::handleInput(Client& client)
 {
     if(!commandQueue.empty())
     {
@@ -141,21 +141,21 @@ void ConsoleInterface::handleInput()
         commandQueue.pop();
         vector<std::string> tokens = splitBySpace(input);
         if(tokens.size() == 0) tokens.push_back("");
-        if(state == State::up)  handleInputUp(tokens);
-        else if(state == State::connected || state == State::seeding || state == State::seeding || state == State::both) handleInputConnected(tokens); // prawie takie same
+        if(state == State::up)  handleInputUp(client, tokens);
+        else if(state == State::connected || state == State::seeding || state == State::seeding || state == State::both) handleInputConnected(client, tokens); // prawie takie same
     }
 }
 
-void ConsoleInterface::stopSeeding()
+void Client::ConsoleInterface::stopSeeding()
 {
     //TODO
 }
 
-void ConsoleInterface::stopLeeching()
+void Client::ConsoleInterface::stopLeeching()
 {
     //TODO
 }
 
-State ConsoleInterface::getState(){
+State Client::ConsoleInterface::getState(){
     return state;
 }

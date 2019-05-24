@@ -11,19 +11,15 @@
 #include <signal.h>
 #include <thread>
 #include <memory>
-#include "consoleInterface.hpp"
 #include "fileManager.hpp"
 #include "../../message/message.hpp"
 
-class ConsoleInterface;
-class FileManager;
-
-typedef std::unique_ptr<ConsoleInterface> ConsoleInterfacePtr;
 typedef std::unique_ptr<FileManager> FileManagerPtr;
 
 class Client
 {
     private:
+        class ConsoleInterface;
         static const int pieceSize = 10;
 
         int sockFd, port, clientSocketsNum, serverSocketsNum, maxFd;        // listen socket; przydzielony port efemeryczny; liczba socketów pobierających/wysyłających dane (nie licząc komunikacji z serwerem)
@@ -37,7 +33,7 @@ class Client
 
         std::thread input;
         msg::MessageManager msg_manager;
-        ConsoleInterfacePtr console;
+        std::unique_ptr<ConsoleInterface> console;
         FileManagerPtr fileManager;
 
         std::thread signal_thread;              
@@ -65,9 +61,6 @@ class Client
         void connectTo(const struct sockaddr_in &server);             // łączy się z klientem o podanym adresie (serwer powinien przesyłać gotową strukturę do klienta) lub z serwerem torrent
 
         const struct sockaddr_in& getServer() const;
-
-        void setConsoleInterface(ConsoleInterfacePtr& x);
-        void setFileManager(FileManagerPtr& x);
 
         void printFolderContent();
         void shareFile(int socket, std::string directory, std::string fname);

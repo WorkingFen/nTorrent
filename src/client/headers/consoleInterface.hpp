@@ -20,25 +20,22 @@ enum class State      // stan, w jakim znajduje się użytkownik (determinuje ob
     down              // użytkownik wybrał opcję zakończenia program
 };
 
-class Client;
-
-class ConsoleInterface
+class Client::ConsoleInterface
 {
-    Client& client;
     State state;
     std::vector<char> buffer;
     std::queue<std::string> commandQueue;
 
-    void handleInputUp(std::vector<std::string> input);
-    void handleInputConnected(std::vector<std::string> input);
+    void handleInputUp(Client& client, std::vector<std::string> input);
+    void handleInputConnected(Client& client, std::vector<std::string> input);
 
     public:
-    ConsoleInterface(Client& c);
+    ConsoleInterface();
     ~ConsoleInterface();
 
     void processCommands(const char* buf);
     std::vector<std::string> splitBySpace(std::string input);       // pewnie powinno być w jakimś utils.h
-    void handleInput();
+    void handleInput(Client& client);
 
     void stopSeeding();
     void stopLeeching();

@@ -1,6 +1,6 @@
 #include "headers/fileManager.hpp"
 
-FileManager::FileManager(Client& c) : client(c)
+FileManager::FileManager()
 {
     getcwd(fileDirName, 1000);
     strcat(fileDirName, "/clientFiles");
