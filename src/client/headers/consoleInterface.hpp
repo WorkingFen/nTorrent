@@ -36,12 +36,17 @@ class Client::ConsoleInterface
     void handleInputUp(Client& client, std::vector<std::string> input);
     void handleInputConnected(Client& client, std::vector<std::string> input);
 
+    void printHelp();
+    void fileDownload(Client &client, const std::vector<std::string> &input);
+    void fileDelete(Client &client, const std::vector<std::string> &input);
+    void fileAdd(Client &client, const std::vector<std::string> &input);
+
     public:
     ConsoleInterface();
     ~ConsoleInterface();
 
     void processCommands(const char* buf);
-    std::vector<std::string> splitBySpace(std::string input);       // pewnie powinno być w jakimś utils.h
+    std::vector<std::string> splitBySpace(const std::string &input);       // pewnie powinno być w jakimś utils.h
     void handleInput(Client& client);
     void printIncorrectCommand();
 
