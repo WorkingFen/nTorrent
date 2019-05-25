@@ -35,4 +35,13 @@ class Client::FileManager
     std::vector<int> getIndexesFromConfig(const std::string& fileName);
 };
 
+class FileManagerException : public std::exception
+{
+    const std::string info;
+
+    public:
+    FileManagerException(const std::string& msg);
+    const char* what() const throw();
+};
+
 #endif

@@ -33,7 +33,7 @@ void Client::FileManager::printFolderContent()
     DIR *fileDir = opendir(fileDirName);
     
     if(fileDir == NULL)
-        throw std::runtime_error ("opendir call failed");
+        throw FileManagerException ("opendir call failed");
 
     struct dirent *x;
     int i=1;
@@ -59,7 +59,7 @@ std::vector<std::string> Client::FileManager::getDirFiles()
 {
     DIR *fileDir = opendir(fileDirName);
     if(fileDir == NULL)
-        throw std::runtime_error ("opendir call failed");  
+        throw FileManagerException ("opendir call failed");  
 
     struct dirent *x;
     std::vector<std::string> fileNames;
@@ -81,7 +81,7 @@ off_t Client::FileManager::getFileSize(const std::string& filename)
     filePath = filePath + "/" + filename;
 
     if(stat(filePath.c_str(), &fileStats) == -1)
-        throw std::runtime_error("Error while retrieving info about file!");
+        throw FileManagerException("Error while retrieving info about file!");
     
     return fileStats.st_size;
 }
@@ -138,7 +138,7 @@ void Client::FileManager::removeFragmentedFiles()
     DIR *fileDir = opendir(fileDirName);
     
     if(fileDir == NULL)
-        throw std::runtime_error ("opendir call failed");
+        throw FileManagerException ("opendir call failed");
 
     struct dirent *x;
     while( (x=readdir(fileDir)) != NULL )
@@ -179,6 +179,13 @@ std::vector<int> Client::FileManager::getIndexesFromConfig(const std::string& fi
 
     while(file >> index)
         indexes.push_back(index);
-        
+
     return indexes;
+}
+
+FileManagerException::FileManagerException(const std::string& msg) : info(msg) {}
+
+const char* FileManagerException::what() const throw()
+{
+    return ("FileManager Exception: " + info).c_str();
 }

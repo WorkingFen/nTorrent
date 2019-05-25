@@ -19,7 +19,7 @@ Client::Client(const char ipAddr[15], const int& port, const char serverIpAddr[1
     prepareSockaddrStruct(server, serverIpAddr, serverPort);
 
     if( (sockFd = socket(AF_INET, SOCK_STREAM, 0)) == -1)
-        throw std::runtime_error ("socket call failed");
+        throw ClientException ("socket call failed");
 
     maxFd = sockFd+1;
 
@@ -28,10 +28,10 @@ Client::Client(const char ipAddr[15], const int& port, const char serverIpAddr[1
         std::cerr<<"setting SO_REUSEADDR option on socket "<<sockFd<<" failed"<<std::endl;   
 
     if(bind(sockFd, (struct sockaddr *) &self, sizeof self) == -1)
-        throw std::runtime_error ("bind call failed");
+        throw ClientException ("bind call failed");
 
     if(listen(sockFd, 20) == -1)
-        throw std::runtime_error ("listen call failed");
+        throw ClientException ("listen call failed");
 
     char fileDir[1000];
     getcwd(fileDir, 1000);
@@ -50,6 +50,7 @@ Client::Client(const char ipAddr[15], const int& port, const char serverIpAddr[1
         this->port=port;
     }
     std::cout << "Successfully connected and listening at: " << ipAddr << ":" << this->port << std::endl;
+    fileManager->removeFragmentedFiles();
 }
 
 
@@ -63,7 +64,7 @@ void Client::connectTo(const struct sockaddr_in &address)
     int sock = socket(AF_INET, SOCK_STREAM, 0);
     
     if(connect(sock, (struct sockaddr *) &address, sizeof address) == -1)         // TODO obsługa błędów - dodać poprawne zamknięcie
-        throw std::runtime_error ("connect call failed");
+        throw ClientException ("connect call failed");
 
     std::cout << "Connected to sbd" << std::endl;
 
@@ -127,7 +128,7 @@ void Client::handleCommands()
 {
     try
     {
-        console->handleInput(*this);          // aby nie zezwolić wątkowi na próbę wypisania menu
+        console->handleInput(*this);
     }
     catch(std::exception& e) 
     { 
@@ -312,34 +313,38 @@ void Client::sendBadBlockHash(int socket, std::string fileName, int blockIndex, 
 }
 
 
-
-
-void Client::turnOff()
+void Client::disconnect()
 {
-	pthread_kill(signal_thread.native_handle(), SIGINT);    // ubicie ewentualnego sigwaita
-    signal_thread.join();
+    int result;
 
-    msg::Message(111).sendMessage(mainServerSocket);
-    int result = close(mainServerSocket);
-    if(result == -1)
-        std::cerr<<"Closing "<< mainServerSocket <<" socket failed"<<std::endl;
+    if(mainServerSocket != -1)          // sprawdzenie czy socket jest używany
+    {
+        msg::Message(111).sendMessage(mainServerSocket);
+        result = close(mainServerSocket);
+        if(result == -1)
+            std::cerr<<"Closing "<< mainServerSocket <<" socket failed"<<std::endl;
+        mainServerSocket = -1;
+    }
 
-    for(auto it = clientSockets.begin(); it != clientSockets.end(); ++it){  // zamknięcie socketów
+    for(auto it = clientSockets.begin(); it != clientSockets.end(); ){  // zamknięcie socketów
 		std::cout<<"Closing client socket ("<<*it<<")"<<std::endl;
 
         msg::Message(111).sendMessage(*it);
         result = close(*it);
+        it = clientSockets.erase(it);
+
         if(result == -1){
             std::cerr<<"Closing "<<*it<<" socket failed"<<std::endl;
             continue;
         }
     }
 
-    for(auto it = serverSockets.begin(); it != serverSockets.end(); ++it){
+    for(auto it = serverSockets.begin(); it != serverSockets.end(); ){
 		std::cout<<"Closing server socket ("<<*it<<")"<<std::endl;
 
         msg::Message(111).sendMessage(*it);
         result = close(*it);
+        it = clientSockets.erase(it);
 
         if(result == -1){
             std::cerr<<"Closing "<<*it<<" socket failed"<<std::endl;
@@ -347,6 +352,15 @@ void Client::turnOff()
         }
         std::cout<<"losed "<<*it<<" server socket"<<std::endl;
     }
+    maxFd = sockFd+1;
+}
+
+void Client::turnOff()
+{
+	pthread_kill(signal_thread.native_handle(), SIGINT);    // ubicie ewentualnego sigwaita
+    signal_thread.join();
+    disconnect();
+    fileManager->removeFragmentedFiles();
 }
 
 void Client::setFileDescrMask()
@@ -380,7 +394,7 @@ void Client::run()
         to.tv_usec = 0;
 
         if ( (select(maxFd, &ready, (fd_set *)0, (fd_set *)0, &to)) == -1)
-             throw std::runtime_error ("select call failed");
+             throw ClientException ("select call failed");
 
         if (FD_ISSET(sockFd, &ready) && serverSocketsNum<5)
         {
@@ -407,4 +421,9 @@ void Client::run()
 }
 
 
+ClientException::ClientException(const std::string& msg) : info(msg) {}
 
+const char* ClientException::what() const throw()
+{
+    return ("Client Exception: " + info).c_str();
+}

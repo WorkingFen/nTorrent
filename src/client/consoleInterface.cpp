@@ -20,20 +20,31 @@ void Client::ConsoleInterface::handleInputUp(Client& client, std::vector<std::st
         cout << "Lista komend:" << endl
         << "help - wypisz liste dostepnych komend" << endl
         << "connect - polacz z serwerem" << endl
-        << "ls - pokaz zawartosc katalogu z plikami, ktore udostepniasz (wymagane polaczenie z serwerem)" << endl
+        << "ls - pokaz zawartosc katalogu z plikami, ktore udostepniasz" << endl
         << "disconnect - rozlacz sie z serwerem" << endl
         << "quit - wylacz program" << endl;
-    }   else if(input[0] == "connect")
+    }   
+    else if(input[0] == "connect")
     {
         client.connectTo(client.getServer());
 
         //wait for 210 before anything else
 
         state = State::connected;
-    }   else if (input[0] == "quit")
+    } 
+    else if(input[0] == "ls")
+    {
+        client.fileManager->printFolderContent();
+    }  
+        else if(input[0] == "disconnect")
+    {
+        cout << "Nie jestes polaczony z serwerem." << endl;
+    }   
+    else if (input[0] == "quit")
     {
         state = State::down;
-    }   else
+    }   
+    else
     {
         cout << "Nieprawidlowa komenda! Wpisz 'help', aby zobaczyc liste komend." << endl;
     }
@@ -53,22 +64,32 @@ void Client::ConsoleInterface::handleInputConnected(Client& client, std::vector<
         cout << "Lista komend:" << endl
         << "help - wypisz liste dostepnych komend" << endl
         << "connect - polacz z serwerem" << endl
-        << "ls - pokaz zawartosc katalogu z plikami, ktore udostepniasz (wymagane polaczenie z serwerem)" << endl
+        << "ls - pokaz zawartosc katalogu z plikami, ktore udostepniasz" << endl
         << "disconnect - rozlacz sie z serwerem" << endl
         << "quit - wylacz program" << endl;
-    }   else if(input[0] == "connect")
+    }   
+    else if(input[0] == "connect")
     {
         cout << "Jestes juz polaczony!" << endl;
-    }   else if(input[0] == "ls")
+    }   
+    else if(input[0] == "ls")
     {
         client.fileManager->printFolderContent();
-    }   else if (input[0] == "quit")
+    }
+    else if(input[0] == "disconnect")
+    {
+        client.disconnect();
+        state = State::up;
+    }     
+    else if (input[0] == "quit")
     {
         state = State::down;
-    }   else if (input[0] == "file_download")
+    }   
+    else if (input[0] == "file_download")
     {
         state = State::down;
-    }   else
+    }   
+    else
     {
         cout << "Nieprawidlowa komenda! Wpisz 'help', aby zobaczyc liste komend." << endl;
     }

@@ -49,6 +49,7 @@ class Client
         void getUserCommands();
         void handleCommands();
 
+        void disconnect();
         void turnOff();                                               // metoda kończąca wszystkie połączenia
         void setFileDescrMask();                                      // metoda ustawiająca maskę deskryptorów plików
 
@@ -73,8 +74,15 @@ class Client
 
         void run();                                                   // pętla z selectem
 
+};
 
+class ClientException : public std::exception
+{
+    const std::string info;
 
+    public:
+    ClientException(const std::string& msg);
+    const char* what() const throw();
 };
 
 #endif
