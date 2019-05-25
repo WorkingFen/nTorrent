@@ -1,6 +1,4 @@
 #include "headers/fileManager.hpp"
-#include <fstream>
-#include <algorithm>
 
 #include <iostream>
 
@@ -94,7 +92,7 @@ void Client::FileManager::putPiece(Client& client, const std::string& fileName, 
     std::string path(fileDirName);
     path = path + "/" + fileName;
 
-	std::fstream filePieces(path.c_str());
+	std::fstream filePieces(path);
 
 	off_t offset = index * client.pieceSize;
 	filePieces.seekp(long(offset), std::ios_base::beg);
@@ -103,7 +101,7 @@ void Client::FileManager::putPiece(Client& client, const std::string& fileName, 
 
 	filePieces.close();
 
-	std::ofstream configFile((path + ".conf").c_str(), std::ios::app);
+	std::ofstream configFile((path + ".conf"), std::ios::app);
 
 	configFile << index;
 	configFile << std::endl;
@@ -116,14 +114,14 @@ void Client::FileManager::createConfig(Client& client, const std::string& fileNa
     std::string path(fileDirName);
     path = path + "/" + fileName;
 
-    std::ofstream newFile(path.c_str(), std::ios::ate);             // tworzy nowy plik
+    std::ofstream newFile(path, std::ios::ate);             // tworzy nowy plik
 
     newFile.seekp(fileSize - 1);
     newFile.write("",1);
     newFile.seekp(0);
     newFile.close();
 
-    std::ofstream configFile((path + ".conf").c_str(), std::ios::app);
+    std::ofstream configFile((path + ".conf"), std::ios::app);
     int numberOfBlocks = fileSize/client.pieceSize;
 
     if(fileSize%client.pieceSize != 0)
@@ -154,10 +152,7 @@ void Client::FileManager::removeFragmentedFiles()
 
 std::vector<char> Client::FileManager::getBlockBytes(Client& client, const std::string& fileName, const int& index)
 {
-    std::string path(fileDirName);
-    path = path + "/" + fileName; 
-
-    std::fstream file(path.c_str());
+    std::fstream file(std::string(fileDirName) + "/" + fileName);
 
 	off_t offset = index * client.pieceSize;
 	file.seekp(long(offset), std::ios_base::beg);
@@ -167,3 +162,10 @@ std::vector<char> Client::FileManager::getBlockBytes(Client& client, const std::
     file.close();
     return bytes;
 }
+
+   bool Client::FileManager::doesBlockExist(const std::string& fileName, const int& index)
+   {
+       std::fstream file(std::string(fileDirName) + "/" + fileName + ".conf");
+
+       return std::count(++std::istream_iterator<int>(file), std::istream_iterator<int>(), index) != 0;         // poszukiwanie od 2 liczby, bo początek to docelowa liczba bloków
+   }
