@@ -182,6 +182,13 @@ void Client::handleMessages()
 
                 std::cout << "Connection severed" << std::endl;
             }
+            else if(msg.type == 301)
+            {
+                std::string filename = msg.readString(msg.readInt());
+                int block_index = msg.readInt();
+
+                seedFile(*it, filename, block_index);
+            }
             else
             {
                 ++it;
@@ -297,7 +304,7 @@ void Client::sendAskForBlock(int socket, std::string fileName, vector<int> block
 
 void Client::sendBadBlockHash(int socket, std::string fileName, int blockIndex, std::string seederAddress)
 {
-    msg::Message badBlockHash(106);
+    msg::Message badBlockHash(107);
 
     badBlockHash.writeInt(fileName.size());         // file
     badBlockHash.writeString(fileName);
@@ -310,8 +317,27 @@ void Client::sendBadBlockHash(int socket, std::string fileName, int blockIndex, 
     badBlockHash.sendMessage(socket);
 }
 
+void Client::leechFile(int socket, std::string filename, int blockIndex)
+{
+    msg::Message leechMsg(301);
 
+    leechMsg.writeInt(filename.size());         // file
+    leechMsg.writeString(filename);
 
+    leechMsg.writeInt(blockIndex);              // block    
+
+    leechMsg.sendMessage(socket);    
+}
+
+void Client::seedFile(int socket, std::string filename, int blockIndex)
+{
+    msg::Message seedMsg(401);
+
+    seedMsg.buffer = {'e','x','a','m','p','l','e'};
+    seedMsg.buf_length = seedMsg.buffer.size();
+
+    seedMsg.sendMessage(socket);
+}
 
 void Client::turnOff()
 {

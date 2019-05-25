@@ -71,7 +71,8 @@ class Client
         void sendHaveBlock(int socket, std::string fileName, int blockIndex, std::string hash);
         void sendAskForBlock(int socket, std::string fileName, std::vector<int> blockList);
         void sendBadBlockHash(int socket, std::string fileName, int blockIndex, std::string seederAdress);
-
+        void leechFile(int socket, std::string filename, int blockIndex);
+        void seedFile(int socket, std::string filename, int blockIndex);
 
         void run();                                                   // pętla z selectem
 
