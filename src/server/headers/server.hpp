@@ -37,6 +37,9 @@
     #ifndef KEEPALIVE
         #define KEEPALIVE
     #endif
+    #ifndef EXPERT
+        #define EXPERT
+    #endif
 #endif
 
 namespace server {

@@ -285,6 +285,17 @@ int server::Server::read_srv() {
         for(auto i : foo->blocks)
             std::cout << "Piece hash: " << i.hash << std::endl;
 #endif
+#ifdef EXPERT
+        for(auto i : files) {
+            std::cout << std::endl << "File: " << i.second.name << std::endl;
+            for(int j = 0; j < i.second.blocks.size(); j++) {
+                std::cout << j << ". Block: " << i.second.blocks[j].hash << std::endl;
+                for(auto k : i.second.blocks[j].owners) {
+                    std::cout << "--- " << k->address.sin_addr.s_addr << ":" << k->address.sin_port << std::endl;
+                }
+            }
+        }
+#endif
     }
     else if(msg.type == 102) { 
         for(auto i : files) {
