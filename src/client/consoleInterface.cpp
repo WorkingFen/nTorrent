@@ -1,4 +1,5 @@
 #include "headers/consoleInterface.hpp"
+#include "headers/fileManager.hpp"
 #include "../hashing/headers/hash.h"
 #include <sstream>
 using std::cout;

@@ -30,6 +30,8 @@ struct Message
 
         file_info,
         block_info,
+        srv_keepalive,
+        srv_hello,
         server_out,
 
         file_block,
