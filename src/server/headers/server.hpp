@@ -56,7 +56,7 @@ typedef std::list<client>::iterator cts_list_it;
 
     struct block {
         std::string hash;               // Block hash
-        std::vector<client> owners;     // Vector of clients who do have this block
+        std::vector<client*> owners;    // Vector of clients who do have this block
 
         block() {}
         block(std::string h): hash(h) {}
@@ -107,13 +107,16 @@ typedef std::list<client>::iterator cts_list_it;
             file* add_file(int, std::string);
             block* add_block(file&, std::string);
             bool add_block(file&, std::string, uint);
-            void add_owner(block&, client);
+            void add_owner(block&, client*);
 
             block* get_block(file&, uint);
 
             void delete_file(std::map<std::string, server::file>::iterator);
             bool delete_block(file&, int);
             bool delete_owner(block&);
+            bool delete_owner(block&, std::string);
+
+            std::pair<client*, int> find_least_occupied(file&, std::vector<int>);
 
             void socket_srv();
             void bind_srv(const char srv_ip[15], const int& srv_port);

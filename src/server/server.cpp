@@ -63,15 +63,15 @@ bool server::Server::add_block(server::file& foo, std::string hash, uint no) {
 
     for(uint i = 0; i < foo.blocks.size(); i++)
         if(foo.blocks[i].hash == hash && i == no) {
-            add_owner(foo.blocks[i], *cts_it);
+            add_owner(foo.blocks[i], &*cts_it);
             return true;
         }
 
     return false;
 }
 
-void server::Server::add_owner(server::block& foo, server::client owner) {
-    for(auto i : foo.owners) if(i.socket == owner.socket) return;
+void server::Server::add_owner(server::block& foo, server::client* owner) {
+    for(auto i : foo.owners) if(i->socket == owner->socket) return;
 
     foo.owners.push_back(owner);
 }
@@ -98,13 +98,49 @@ bool server::Server::delete_block(server::file& foo, int no) {
 
 bool server::Server::delete_owner(server::block& foo) {
     for(auto i = foo.owners.begin(); i != foo.owners.end(); i++)
-        if(i->socket == cts_it->socket) {
+        if(&(*i)->socket == &cts_it->socket) {
             foo.owners.erase(i);
             break;
         }
     
     if(foo.owners.empty()) return true;
     else return false;
+}
+
+bool server::Server::delete_owner(server::block& foo, std::string addr) {
+    std::string str_ip = addr.substr(0, 15);
+    in_addr_t ip = stoi(str_ip);
+    std::size_t pos = addr.find(":");
+    std::string str_port = addr.substr(pos+1);
+    in_port_t port = stoi(str_port);
+
+    for(auto i = foo.owners.begin(); i != foo.owners.end(); i++)
+        if(*(&(*i)->address.sin_port) == port && *(&(*i)->address.sin_addr.s_addr) == ip) {
+            foo.owners.erase(i);
+            break;
+        }
+    
+    if(foo.owners.empty()) return true;
+    else return false;
+}
+
+std::pair<server::client*, int> server::Server::find_least_occupied(server::file& foo, std::vector<int> no_blocks) {
+    client* best_ct = foo.blocks[0].owners.front();
+    int best_no = 0;
+
+    for(uint i = 0; i < foo.blocks.size(); i++) {
+        if(!no_blocks.empty()) for(uint tmp : no_blocks) if(tmp == i) continue;
+
+        for(auto j : foo.blocks[i].owners) {
+            if(j->no_leeches == 0) return std::pair<client*, int>({j,i});
+            else if(best_ct->no_leeches >= j->no_leeches) {
+                best_ct = j;
+                best_no = i;
+            }
+        }
+    }
+
+    return std::pair<client*, int>({best_ct,best_no});
 }
 
 server::Server::Server(const char srv_ip[15], const int& srv_port) : sigint_flag(false) {
@@ -240,7 +276,7 @@ int server::Server::read_srv() {
         file* foo = add_file(msg.readInt(), msg.readString(msg.readInt()));  // Weird specification of C++ compiler?
         for(int i = 0; msg.buf_length > 0; i++) {
             block* bar = add_block(*foo, msg.readString(64));
-            add_owner(*bar, *cts_it);
+            add_owner(*bar, &*cts_it);
         }
 #ifdef LOGS
         std::cout << std::endl << "Message type: " << msg.type << std::endl;
@@ -276,13 +312,17 @@ int server::Server::read_srv() {
         std::cout << std::endl << "Message type: " << msg.type << std::endl;
 #endif
     }
-    /*else if(msg.type == 104) {
-// TODO
+    else if(msg.type == 104) {
         auto foo = files.find(msg.readString(msg.readInt()));
 #ifdef LOGS
         std::cout << std::endl << "Message type: " << msg.type << std::endl;
 #endif
-    }*/
+        msg::Message file_cfg(201);
+        file_cfg.writeInt(foo->second.name.size());
+        file_cfg.writeString(foo->second.name);
+        file_cfg.writeInt(foo->second.size);
+        file_cfg.sendMessage(cts_it->socket);
+    }
     else if(msg.type == 105) {
         file* foo = add_file(msg.readString(msg.readInt()));
         int no_block = msg.readInt();
@@ -294,31 +334,42 @@ int server::Server::read_srv() {
         std::cout << "Piece hash: " << foo->blocks[no_block].hash << std::endl;
 #endif
     }
-    /*else if(msg.type == 106) {
-// TODO: ????
-        int name_size = msg.readInt();
-        // file foo = get_file()                // TODO
-
-        std::cout << "File name: " << msg.readString(name_size) << std::endl;
-        std::cout << "File size: " << msg.readInt() << std::endl;
+    else if(msg.type == 106) {
+        auto foo = files.find(msg.readString(msg.readInt()));
+        std::vector<int> blocks_no = std::vector<int>();
         while(msg.buf_length > 0)
-            std::cout << "Piece hash: " << msg.readString(64) << std::endl;    
+            blocks_no.push_back(msg.readInt());
+        auto bar = find_least_occupied(foo->second, blocks_no);
+        bar.first->no_leeches++;
+        msg::Message file_info(202);
+        file_info.writeInt(foo->second.name.size());
+        file_info.writeString(foo->second.name);
+        file_info.writeInt(bar.second);
+        file_info.writeString(foo->second.blocks[bar.second].hash);
+        std::string addr = std::to_string(bar.first->address.sin_addr.s_addr) + ":" + std::to_string(bar.first->address.sin_port); 
+        file_info.writeInt(addr.size());
+        file_info.writeString(addr);
+        file_info.sendMessage(cts_it->socket);
 #ifdef LOGS
         std::cout << std::endl << "Message type: " << msg.type << std::endl;
 #endif
     }
     else if(msg.type == 107) {
-// TODO: ????
+        auto foo = files.find(msg.readString(msg.readInt()));
+        int no_block = msg.readInt();
+        std::string addr = msg.readString(msg.readInt());
+        std::cout << std::endl << addr << std::endl;
+        if(delete_owner(*get_block(foo->second, no_block), addr) && delete_block(foo->second, no_block)){
+            std::string name = foo->second.name;
+            delete_file(foo);
+#ifdef LOGS
+            std::cout << std::endl << "File " << name << " has been deleted" << std::endl;
+#endif
+        }
 #ifdef LOGS
         std::cout << std::endl << "Message type: " << msg.type << std::endl;
 #endif
-        int name_size = msg.readInt();     
-
-        std::cout << "File name: " << msg.readString(name_size) << std::endl;
-        std::cout << "File size: " << msg.readInt() << std::endl;
-        while(msg.buf_length > 0)
-            std::cout << "Piece hash: " << msg.readString(64) << std::endl;
-    }*/
+    }
     else if(msg.type == 110) {
 #ifdef KEEPALIVE
         std::cout << "KeepAlive: on socket number " << cts_it->socket << std::endl;
