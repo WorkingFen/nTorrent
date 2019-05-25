@@ -8,11 +8,12 @@
 #include <ctime>
 #include <fstream>
 
+#include "headers/fileManager.hpp"
 #include "headers/consoleInterface.hpp"
 
 using namespace msg;
 
-Client::Client(const char ipAddr[15], const int& port, const char serverIpAddr[15], const int& serverPort) : clientSocketsNum(0), serverSocketsNum(0), maxFd(0), console(std::unique_ptr<ConsoleInterface>(new ConsoleInterface)), fileManager(FileManagerPtr(new FileManager))
+Client::Client(const char ipAddr[15], const int& port, const char serverIpAddr[15], const int& serverPort) : clientSocketsNum(0), serverSocketsNum(0), maxFd(0), console(std::unique_ptr<ConsoleInterface>(new ConsoleInterface)), fileManager(std::unique_ptr<FileManager>(new FileManager))
 {
     prepareSockaddrStruct(self, ipAddr, port);
     prepareSockaddrStruct(server, serverIpAddr, serverPort);
@@ -48,7 +49,6 @@ Client::Client(const char ipAddr[15], const int& port, const char serverIpAddr[1
     {
         this->port=port;
     }
-    
     std::cout << "Successfully connected and listening at: " << ipAddr << ":" << this->port << std::endl;
 }
 
@@ -157,6 +157,56 @@ void Client::handleMessagesfromServer()
 
             shareFiles();
         }
+        else if(msg.type == 201)                // serwer wysłał info o pliku do pobrania
+        {
+            if(console->getMessageState() == MessageState::wait_for_file_info) // jeśli czekaliśmy na to info
+            {
+                int fileNameLength = msg.readInt();                     // długość nazwy
+                std::string fileName = msg.readString(fileNameLength);  // nazwa pliku
+                // TODO: sprawdzenie czy nazwa pliku się zgadza
+
+                int fileSize = msg.readInt();                           // rozmiar pliku
+                (void)fileSize;
+                std::vector<int> indexes = fileManager->getIndexesFromConfig(fileName);
+                sendAskForBlock(mainServerSocket, fileName, indexes);   // wysyła zapytanie o blok 
+
+                console->setMessageState(MessageState::wait_for_block_info);    // ustaw stan na oczekiwanie na informację skąd pobrać blok
+            }
+            else    
+            {
+                /* serwer wysłał złą wiadomość */
+            }
+            
+
+        }
+        else if(msg.type == 202)
+        {
+            if(console->getMessageState() == MessageState::wait_for_block_info) // jeśli czekaliśmy na to info
+            {
+                int fileNameLength = msg.readInt();                      // długość nazwy
+                std::string fileName = msg.readString(fileNameLength);   // nazwa pliku
+                int blockIndex = msg.readInt();                          // numer bloku
+                int hashLength = msg.readInt();                          // długość hashu
+                std::string hash = msg.readString(hashLength);           // nazwa pliku
+                int addressLength = msg.readInt();                       // długość adresu
+                std::string address = msg.readString(addressLength);     // adres
+                int port = msg.readInt();                                // port?
+
+                std::vector<int> indexes = fileManager->getIndexesFromConfig(fileName);
+                sendAskForBlock(mainServerSocket, fileName, indexes);   // wysyła zapytanie o blok 
+                console->setMessageState(MessageState::wait_for_file_info);
+
+                (void)blockIndex;
+                (void)port;
+
+                // tutaj wywołanie komunikacji z klientem
+            }
+            else    
+            {
+                /* serwer wysłał złą wiadomość */
+            }
+            
+        }
     }
     else if(msg_manager.lastReadResult() == 0 || msg_manager.lastReadResult() == -1) //server left
     {
@@ -258,14 +308,15 @@ void Client::sendDeleteBlock(int socket, std::string fileName, int blockIndex)
     deleteBlock.sendMessage(socket);        
 }
 
-void Client::sendAskForFile(int socket, std::string fileName)
+void Client::sendAskForFile(std::string fileName)
 {
+
     msg::Message askForFile(104);
 
     askForFile.writeInt(fileName.size());
     askForFile.writeString(fileName);
 
-    askForFile.sendMessage(socket);
+    askForFile.sendMessage(mainServerSocket);
 }
 
 void Client::sendHaveBlock(int socket, std::string fileName, int blockIndex, std::string hash)
@@ -311,29 +362,7 @@ void Client::sendBadBlockHash(int socket, std::string fileName, int blockIndex, 
     badBlockHash.sendMessage(socket);
 }
 
-void Client::putPiece(std::string fileName, int index, int pieceLength, std::string pieceData) {      //Dla każdego pobieranego pliku tworzy plik.conf
-    // co jak zabijemy proces i zostanie plik.conf i pofragmentowany plik?
-    // można na starcie programu czyścić katalogi z tymi plikami
 
-	std::ofstream filePieces(fileName.c_str());
-
-	off_t offset = index * pieceLength;
-	filePieces.seekp(long(offset), std::ios_base::beg);
-
-	filePieces << pieceData;
-
-	filePieces.close();
-
-	string fileConfigName = fileName;
-	fileConfigName += ".conf";
-
-	std::ofstream fileConfig(fileConfigName.c_str(), std::ios::app);
-
-	fileConfig << index;
-	fileConfig << std::endl;
-
-    fileConfig.close();
-}
 
 
 void Client::turnOff()

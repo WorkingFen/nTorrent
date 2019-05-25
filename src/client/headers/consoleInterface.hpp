@@ -3,12 +3,10 @@
 
 #include "client.hpp"
 #include <iostream>
-#include <dirent.h>
 #include <unistd.h>
 #include <string.h>
 #include <vector>
 #include <queue>
-#include <sys/stat.h>
 
 enum class State      // stan, w jakim znajduje się użytkownik (determinuje obsługę i/o)
 {
@@ -17,12 +15,21 @@ enum class State      // stan, w jakim znajduje się użytkownik (determinuje ob
     seeding,          // udostępnia plik(i), nic nie pobiera
     leeching,         // pobiera plik(i), nic nie udostępnia
     both,             // jednocześnie udostępnia i pobiera
-    down              // użytkownik wybrał opcję zakończenia program
+    down,             // użytkownik wybrał opcję zakończenia programu
+};
+
+enum class MessageState
+{
+    wait_for_file_info,    // oczekiwanie na odpowiedź od serwera na zapytanie o plik
+    wait_for_block_info,   // oczekiwanie na odpowiedź od serwera na zapytanie o plik
+    none
 };
 
 class Client::ConsoleInterface
 {
     State state;
+    MessageState messageState;
+    std::string chosenFile;
     std::vector<char> buffer;
     std::queue<std::string> commandQueue;
 
@@ -39,7 +46,12 @@ class Client::ConsoleInterface
 
     void stopSeeding();
     void stopLeeching();
+
     State getState();
+    MessageState getMessageState();
+    void setMessageState(MessageState state);
+
+    std::string getChosenFile();
 };
 
 #endif
