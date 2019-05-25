@@ -32,6 +32,7 @@ class Client::FileManager
     void removeFragmentedFiles();
     std::vector<char> getBlockBytes(Client& client, const std::string& fileName, const int& index);
     bool doesBlockExist(const std::string& fileName, const int& index);
+    std::vector<int> getIndexesFromConfig(const std::string& fileName);
 };
 
 #endif
