@@ -16,9 +16,13 @@
 #include <chrono>
 #include "../../message/message.hpp"
 
-#define SRVNOCONN 404
-#define SRVNORM 1
-#define SRVERROR -1
+#define SRV_NOCONN 404
+#define SRV_OK 1
+#define SRV_ERROR -1
+
+#define MSG_OK 1
+#define MSG_RNGERROR 0
+#define MSG_ERROR -1
 
 #define LOGS
 
@@ -106,12 +110,12 @@ typedef std::list<client>::iterator cts_list_it;
             Server(const char srv_ip[15], const int& srv_port);
             ~Server();
 
-            file* add_file(std::string);
             file* add_file(int, std::string);
             block* add_block(file&, std::string);
-            bool add_block(file&, std::string, uint);
+            int add_block_owner(file&, std::string, uint);
             void add_owner(block&, client*);
 
+            file* get_file(std::string);
             block* get_block(file&, uint);
 
             void delete_file(std::map<std::string, server::file>::iterator);

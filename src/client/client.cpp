@@ -161,9 +161,6 @@ void Client::handleMessagesfromServer()
         {
             if(console->getMessageState() == MessageState::wait_for_file_info) // jeśli czekaliśmy na to info
             {
-                std::string text;
-                for(auto i : msg.buffer) if(i < 'A' || i > 'z') text += std::to_string(i); else text += i;
-                std::cout << text << std::endl;
                 int fileNameLength = msg.readInt();                     // długość nazwy
                 std::string fileName = msg.readString(fileNameLength);  // nazwa pliku
                 // TODO: sprawdzenie czy nazwa pliku się zgadza
