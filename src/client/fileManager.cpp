@@ -166,8 +166,10 @@ std::vector<char> Client::FileManager::getBlockBytes(Client& client, const std::
 bool Client::FileManager::doesBlockExist(const std::string& fileName, const int& index)
 {
     std::fstream file(std::string(fileDirName) + "/" + fileName + ".conf");
+    std::istream_iterator<int> begin(file);
+    std::istream_iterator<int> end;
 
-    return std::count(++std::istream_iterator<int>(file), std::istream_iterator<int>(), index) != 0;         // poszukiwanie od 2 liczby, bo początek to docelowa liczba bloków
+    return std::find(++begin, end, index) != end;         // poszukiwanie od 2 liczby, bo początek to docelowa liczba bloków
 }
 
 std::vector<int> Client::FileManager::getIndexesFromConfig(const std::string& fileName)
