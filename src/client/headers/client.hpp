@@ -11,15 +11,13 @@
 #include <signal.h>
 #include <thread>
 #include <memory>
-#include "fileManager.hpp"
 #include "../../message/message.hpp"
-
-typedef std::unique_ptr<FileManager> FileManagerPtr;
 
 class Client
 {
     private:
         class ConsoleInterface;
+        class FileManager;
         int pieceSize = 10;
 
         int sockFd, port, clientSocketsNum, serverSocketsNum, maxFd;        // listen socket; przydzielony port efemeryczny; liczba socketów pobierających/wysyłających dane (nie licząc komunikacji z serwerem)
@@ -34,7 +32,7 @@ class Client
         std::thread input;
         msg::MessageManager msg_manager;
         std::unique_ptr<ConsoleInterface> console;
-        FileManagerPtr fileManager;
+        std::unique_ptr<FileManager> fileManager;
 
         std::thread signal_thread;              
         sigset_t signal_set;					// do ustawienia sigmask
@@ -72,7 +70,6 @@ class Client
         void sendAskForBlock(int socket, std::string fileName, std::vector<int> blockList);
         void sendBadBlockHash(int socket, std::string fileName, int blockIndex, std::string seederAdress);
 
-        void putPiece(std::string fileName, int index, int pieceLength, std::string pieceData);        
 
         void run();                                                   // pętla z selectem
 

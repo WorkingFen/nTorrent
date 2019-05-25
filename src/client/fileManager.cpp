@@ -1,22 +1,42 @@
 #include "headers/fileManager.hpp"
+#include <fstream>
+#include <algorithm>
 
-FileManager::FileManager()
+#include <iostream>
+
+Client::FileManager::FileManager()
 {
     getcwd(fileDirName, 1000);
     strcat(fileDirName, "/clientFiles");
-    fileDir = opendir(fileDirName);
+}
 
+Client::FileManager::~FileManager() {}
+
+void Client::FileManager::removeFileIfFragmented(const std::string& fileName)
+{
+    std::string path(fileDirName);
+    path = path + "/" + fileName;
+
+    std::ifstream inFile(path + ".conf"); 
+    int downloadedBlocksNumber = std::count(std::istreambuf_iterator<char>(inFile), std::istreambuf_iterator<char>(), '\n') - 1;
+    int defaultBlocksNumber;
+    inFile.seekg(0);
+    inFile >> defaultBlocksNumber;
+    
+    if(downloadedBlocksNumber < defaultBlocksNumber)
+    {
+        remove((path + ".conf").c_str());
+        remove(path.c_str());
+    }
+}
+
+void Client::FileManager::printFolderContent()
+{
+    DIR *fileDir = opendir(fileDirName);
+    
     if(fileDir == NULL)
         throw std::runtime_error ("opendir call failed");
-}
 
-FileManager::~FileManager()
-{
-    closedir(fileDir);
-}
-
-void FileManager::printFolderContent()
-{
     struct dirent *x;
     int i=1;
     std::cout << std::endl << "ZAWARTOSC KATALOGU:" << std::endl; 
@@ -29,16 +49,20 @@ void FileManager::printFolderContent()
         }
     }
     std::cout << std::endl;
-    rewinddir(fileDir);
+    closedir(fileDir);
 }
 
-void FileManager::setDir()
+void Client::FileManager::setDir()
 {
 
 }
 
-std::vector<std::string> FileManager::getDirFiles()
+std::vector<std::string> Client::FileManager::getDirFiles()
 {
+    DIR *fileDir = opendir(fileDirName);
+    if(fileDir == NULL)
+        throw std::runtime_error ("opendir call failed");  
+
     struct dirent *x;
     std::vector<std::string> fileNames;
     while( (x=readdir(fileDir)) != NULL )
@@ -48,11 +72,11 @@ std::vector<std::string> FileManager::getDirFiles()
             fileNames.push_back(x->d_name);
         }
     }
-    rewinddir(fileDir);
+    closedir(fileDir);
     return fileNames;
 } 
 
-off_t FileManager::getFileSize(const std::string& filename)
+off_t Client::FileManager::getFileSize(const std::string& filename)
 {
     struct stat fileStats;
     std::string filePath(fileDirName);
@@ -62,4 +86,84 @@ off_t FileManager::getFileSize(const std::string& filename)
         throw std::runtime_error("Error while retrieving info about file!");
     
     return fileStats.st_size;
+}
+
+void Client::FileManager::putPiece(Client& client, const std::string& fileName, const int& index, const std::string& pieceData) {      //Dla każdego pobieranego pliku tworzy plik.conf
+    // chyba na starcie programu trzeba czyścić katalogi z niekompletnymi plikami i .conf
+
+    std::string path(fileDirName);
+    path = path + "/" + fileName;
+
+	std::fstream filePieces(path.c_str());
+
+	off_t offset = index * client.pieceSize;
+	filePieces.seekp(long(offset), std::ios_base::beg);
+
+	filePieces << pieceData;
+
+	filePieces.close();
+
+	std::ofstream configFile((path + ".conf").c_str(), std::ios::app);
+
+	configFile << index;
+	configFile << std::endl;
+
+    configFile.close();
+}
+
+void Client::FileManager::createConfig(Client& client, const std::string& fileName, const off_t& fileSize)
+{
+    std::string path(fileDirName);
+    path = path + "/" + fileName;
+
+    std::ofstream newFile(path.c_str(), std::ios::ate);             // tworzy nowy plik
+
+    newFile.seekp(fileSize - 1);
+    newFile.write("",1);
+    newFile.seekp(0);
+    newFile.close();
+
+    std::ofstream configFile((path + ".conf").c_str(), std::ios::app);
+    int numberOfBlocks = fileSize/client.pieceSize;
+
+    if(fileSize%client.pieceSize != 0)
+        configFile << numberOfBlocks + 1;
+    else
+        configFile << numberOfBlocks;
+       
+    configFile << std::endl;
+    configFile.close();
+}
+
+void Client::FileManager::removeFragmentedFiles()
+{
+    DIR *fileDir = opendir(fileDirName);
+    
+    if(fileDir == NULL)
+        throw std::runtime_error ("opendir call failed");
+
+    struct dirent *x;
+    while( (x=readdir(fileDir)) != NULL )
+    {
+        const std::string fileName = x->d_name;
+        if(fileName != "." && fileName != ".." && fileName.find(".conf") != std::string::npos)
+            removeFileIfFragmented(fileName.substr(0, fileName.size()-5));
+    }
+    closedir(fileDir);    
+}
+
+std::vector<char> Client::FileManager::getBlockBytes(Client& client, const std::string& fileName, const int& index)
+{
+    std::string path(fileDirName);
+    path = path + "/" + fileName; 
+
+    std::fstream file(path.c_str());
+
+	off_t offset = index * client.pieceSize;
+	file.seekp(long(offset), std::ios_base::beg);
+    std::vector<char> bytes(client.pieceSize);
+    file.read(&bytes[0], client.pieceSize);
+
+    file.close();
+    return bytes;
 }

@@ -3,12 +3,10 @@
 
 #include "client.hpp"
 #include <iostream>
-#include <dirent.h>
 #include <unistd.h>
 #include <string.h>
 #include <vector>
 #include <queue>
-#include <sys/stat.h>
 
 enum class State      // stan, w jakim znajduje się użytkownik (determinuje obsługę i/o)
 {
