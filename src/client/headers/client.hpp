@@ -45,10 +45,15 @@ class Client
         void prepareSockaddrStruct(struct sockaddr_in& x, const char ipAddr[15], const int& port);
 
         void handleMessagesfromServer(); 
+
+        void handleServerFileInfo(msg::Message msg);        // handler dla 201
+        void handleServerBlockInfo(msg::Message msg);       // handler dla 202
+
         void handleMessages();
         void getUserCommands();
         void handleCommands();
 
+        void disconnect();
         void turnOff();                                               // metoda kończąca wszystkie połączenia
         void setFileDescrMask();                                      // metoda ustawiająca maskę deskryptorów plików
 
@@ -60,21 +65,32 @@ class Client
 
         const struct sockaddr_in& getServer() const;
 
-        void shareFile(int socket, std::string directory, std::string fname);
+        void shareFile(std::string directory, std::string fname);
         void shareFiles();
         void sendFileInfo(int socket, std::string directory, std::string filename);
         void sendFilesInfo();
         void sendDeleteBlock(int socket, std::string fileName, int blockIndex);
+        void sendDeleteBlocks(std::string fileName);
+        void sendDeleteFile(std::string fileName);
         void sendAskForFile(std::string fileName);
         void sendHaveBlock(int socket, std::string fileName, int blockIndex, std::string hash);
         void sendAskForBlock(int socket, std::string fileName, std::vector<int> blockList);
-        void sendBadBlockHash(int socket, std::string fileName, int blockIndex, std::string seederAdress);
+        void sendBadBlockHash(int socket, std::string fileName, int blockIndex, int seederAddress, int seederPort);
+
+        
 
 
         void run();                                                   // pętla z selectem
 
+};
 
+class ClientException : public std::exception
+{
+    const std::string info;
 
+    public:
+    ClientException(const std::string& msg);
+    const char* what() const throw();
 };
 
 #endif
