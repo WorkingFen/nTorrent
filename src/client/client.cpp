@@ -157,6 +157,56 @@ void Client::handleMessagesfromServer()
 
             shareFiles();
         }
+        else if(msg.type == 201)                // serwer wysłał info o pliku do pobrania
+        {
+            if(console->getMessageState() == MessageState::wait_for_file_info) // jeśli czekaliśmy na to info
+            {
+                int fileNameLength = msg.readInt();                     // długość nazwy
+                std::string fileName = msg.readString(fileNameLength);  // nazwa pliku
+                // TODO: sprawdzenie czy nazwa pliku się zgadza
+
+                int fileSize = msg.readInt();                           // rozmiar pliku
+                (void)fileSize;
+                std::vector<int> indexes = fileManager->getIndexesFromConfig(fileName);
+                sendAskForBlock(mainServerSocket, fileName, indexes);   // wysyła zapytanie o blok 
+
+                console->setMessageState(MessageState::wait_for_block_info);    // ustaw stan na oczekiwanie na informację skąd pobrać blok
+            }
+            else    
+            {
+                /* serwer wysłał złą wiadomość */
+            }
+            
+
+        }
+        else if(msg.type == 202)
+        {
+            if(console->getMessageState() == MessageState::wait_for_block_info) // jeśli czekaliśmy na to info
+            {
+                int fileNameLength = msg.readInt();                      // długość nazwy
+                std::string fileName = msg.readString(fileNameLength);   // nazwa pliku
+                int blockIndex = msg.readInt();                          // numer bloku
+                int hashLength = msg.readInt();                          // długość hashu
+                std::string hash = msg.readString(hashLength);           // nazwa pliku
+                int addressLength = msg.readInt();                       // długość adresu
+                std::string address = msg.readString(addressLength);     // adres
+                int port = msg.readInt();                                // port?
+
+                std::vector<int> indexes = fileManager->getIndexesFromConfig(fileName);
+                sendAskForBlock(mainServerSocket, fileName, indexes);   // wysyła zapytanie o blok 
+                console->setMessageState(MessageState::wait_for_file_info);
+
+                (void)blockIndex;
+                (void)port;
+
+                // tutaj wywołanie komunikacji z klientem
+            }
+            else    
+            {
+                /* serwer wysłał złą wiadomość */
+            }
+            
+        }
     }
     else if(msg_manager.lastReadResult() == 0 || msg_manager.lastReadResult() == -1) //server left
     {
@@ -258,14 +308,15 @@ void Client::sendDeleteBlock(int socket, std::string fileName, int blockIndex)
     deleteBlock.sendMessage(socket);        
 }
 
-void Client::sendAskForFile(int socket, std::string fileName)
+void Client::sendAskForFile(std::string fileName)
 {
+
     msg::Message askForFile(104);
 
     askForFile.writeInt(fileName.size());
     askForFile.writeString(fileName);
 
-    askForFile.sendMessage(socket);
+    askForFile.sendMessage(mainServerSocket);
 }
 
 void Client::sendHaveBlock(int socket, std::string fileName, int blockIndex, std::string hash)

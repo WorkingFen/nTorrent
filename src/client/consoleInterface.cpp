@@ -8,7 +8,7 @@ using std::string;
 using std::vector;
 
 
-Client::ConsoleInterface::ConsoleInterface(): state(State::up) {}
+Client::ConsoleInterface::ConsoleInterface(): state(State::up), messageState(MessageState::none) {}
 
 Client::ConsoleInterface::~ConsoleInterface() {}
 
@@ -67,7 +67,17 @@ void Client::ConsoleInterface::handleInputConnected(Client& client, std::vector<
         state = State::down;
     }   else if (input[0] == "file_download")
     {
-        state = State::down;
+        if(input.size() < 2)
+        {
+            cout << "Nieprawidlowa komenda! Wpisz 'help', aby zobaczyc liste komend." << endl;
+        }
+        else
+        {
+            client.sendAskForFile(input[1]);                    // wysłanie żądania o plik do serwera
+            messageState = MessageState::wait_for_file_info;    // ustawienie stanu na czekanie na odpowiedź od serwera o pliku
+            chosenFile = input[1];                              // zapisanie wybranego pliku
+        }
+
     }   else
     {
         cout << "Nieprawidlowa komenda! Wpisz 'help', aby zobaczyc liste komend." << endl;
@@ -161,3 +171,16 @@ void Client::ConsoleInterface::stopLeeching()
 State Client::ConsoleInterface::getState(){
     return state;
 }
+
+MessageState Client::ConsoleInterface::getMessageState(){
+    return messageState;
+}
+
+void Client::ConsoleInterface::setMessageState(MessageState newState){
+    messageState = newState;
+}
+
+std::string Client::ConsoleInterface::getChosenFile(){
+    return chosenFile;
+}
+

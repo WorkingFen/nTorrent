@@ -167,3 +167,25 @@ std::vector<char> Client::FileManager::getBlockBytes(Client& client, const std::
     file.close();
     return bytes;
 }
+
+std::vector<int> Client::FileManager::getIndexesFromConfig(const std::string& fileName)
+{
+    std::string path(fileDirName);
+    path = path + "/" + fileName + ".conf";
+
+    std::fstream file(path.c_str());
+    off_t fileSize;
+    file >> fileSize;
+    std::cout<<"fileSize = "<<fileSize<<std::endl;
+
+    int index;
+    std::vector<int> indexes;
+    while(file >> index)
+    {
+        indexes.push_back(index);
+    }
+ 
+    return indexes;
+}
+
+
