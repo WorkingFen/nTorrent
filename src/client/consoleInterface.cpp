@@ -13,27 +13,38 @@ Client::ConsoleInterface::ConsoleInterface(): state(State::up), messageState(Mes
 Client::ConsoleInterface::~ConsoleInterface() {}
 
 void Client::ConsoleInterface::handleInputUp(Client& client, std::vector<std::string> input){
+    std::string firstArg = input[0];
 
-
-    if(input[0] == "help")
+    if(firstArg == "help")
     {
         cout << "Lista komend:" << endl
         << "help - wypisz liste dostepnych komend" << endl
         << "connect - polacz z serwerem" << endl
-        << "ls - pokaz zawartosc katalogu z plikami, ktore udostepniasz (wymagane polaczenie z serwerem)" << endl
+        << "ls - pokaz zawartosc katalogu z plikami, ktore udostepniasz" << endl
         << "disconnect - rozlacz sie z serwerem" << endl
         << "quit - wylacz program" << endl;
-    }   else if(input[0] == "connect")
+    }   
+    else if(firstArg == "connect")
     {
         client.connectTo(client.getServer());
 
         //wait for 210 before anything else
 
         state = State::connected;
-    }   else if (input[0] == "quit")
+    } 
+    else if(firstArg == "ls")
+    {
+        client.fileManager->printFolderContent();
+    }  
+        else if(firstArg == "disconnect")
+    {
+        cout << "Nie jestes polaczony z serwerem." << endl;
+    }   
+    else if (firstArg == "quit")
     {
         state = State::down;
-    }   else
+    }   
+    else
     {
         cout << "Nieprawidlowa komenda! Wpisz 'help', aby zobaczyc liste komend." << endl;
     }
@@ -47,29 +58,43 @@ void Client::ConsoleInterface::handleInputUp(Client& client, std::vector<std::st
 
 */
 void Client::ConsoleInterface::handleInputConnected(Client& client, std::vector<std::string> input){
+    std::string firstArg = input[0];
 
-    if(input[0] == "help")
+    if(firstArg == "help")
     {
         cout << "Lista komend:" << endl
         << "help - wypisz liste dostepnych komend" << endl
         << "connect - polacz z serwerem" << endl
-        << "ls - pokaz zawartosc katalogu z plikami, ktore udostepniasz (wymagane polaczenie z serwerem)" << endl
+        << "file_download <nazwa_pliku>" << endl
+        << "file_add <nazwa_pliku>" << endl
+        << "file_delete <nazwa_pliku>" << endl
+        << "ls - pokaz zawartosc katalogu z plikami, ktore udostepniasz" << endl
         << "disconnect - rozlacz sie z serwerem" << endl
         << "quit - wylacz program" << endl;
-    }   else if(input[0] == "connect")
+    }   
+    else if(firstArg == "connect")
     {
         cout << "Jestes juz polaczony!" << endl;
-    }   else if(input[0] == "ls")
+    }   
+    else if(firstArg == "ls")
     {
         client.fileManager->printFolderContent();
-    }   else if (input[0] == "quit")
+    }
+    else if(firstArg == "disconnect")
+    {
+        client.disconnect();
+        state = State::up;
+        messageState = MessageState::none;
+    }     
+    else if (firstArg == "quit")
     {
         state = State::down;
-    }   else if (input[0] == "file_download")
+    }   
+    else if (firstArg == "file_download")
     {
         if(input.size() < 2)
         {
-            cout << "Nieprawidlowa komenda! Wpisz 'help', aby zobaczyc liste komend." << endl;
+            printIncorrectCommand();
         }
         else
         {
@@ -78,41 +103,40 @@ void Client::ConsoleInterface::handleInputConnected(Client& client, std::vector<
             chosenFile = input[1];                              // zapisanie wybranego pliku
         }
 
-    }   else
+    }   
+    else if (firstArg == "file_delete")
     {
-        cout << "Nieprawidlowa komenda! Wpisz 'help', aby zobaczyc liste komend." << endl;
+        if(input.size() < 2)
+        {
+            printIncorrectCommand();
+        }
+        else
+        {
+            client.sendDeleteFile(input[1]);                    // wysłanie żądania o plik do serwera
+        }
+
+    }   
+    else if (firstArg == "file_add")
+    {
+        if(input.size() < 2)
+        {
+            printIncorrectCommand();
+        }
+        else
+        {
+            client.shareFile("clientFiles", input[1]);                    // wysłanie żądania o plik do serwera
+        }        
     }
-/*
-    switch(input){
-        case 1:
-                printFolderContent();
-                break;
-        
-        case 2:
-                //TODO
-                break;
-        case 3:
-                break;
-
-        case 4:
-                if(state == State::seeding) {stopSeeding();}
-                if(state == State::leeching || state == State::both) {stopLeeching();}
-                break;
-
-        case 5:
-                if(state == State::both) {stopSeeding();}
-                break;
-                
-        case 9:
-                state = State::down;
-                break;
-
-        default:
-                //TODO
-                break;
-
+    else
+    {
+        printIncorrectCommand();
     }
-*/
+}
+
+void Client::ConsoleInterface::printIncorrectCommand()
+{
+    cout << "Nieprawidlowa komenda! Wpisz 'help', aby zobaczyc liste komend." << endl;
+
 }
 
 void Client::ConsoleInterface::processCommands(const char* buf)

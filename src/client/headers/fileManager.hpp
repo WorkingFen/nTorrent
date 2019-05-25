@@ -8,6 +8,9 @@
 #include <string.h>
 #include <vector>
 #include <queue>
+#include <iterator>
+#include <fstream>
+#include <algorithm>
 #include <sys/stat.h>
 
 class Client::FileManager
@@ -27,8 +30,18 @@ class Client::FileManager
     void putPiece(Client& client, const std::string& fileName, const int& index, const std::string& pieceData);           // metoda umieszczająca fragment pliku w pliku docelowym i aktualizująca plik konfiguracyjny
     void createConfig(Client& client, const std::string& fileName, const off_t& fileSize);                 // metoda tworząca plik konfiguracyjny (na jego początku docelowa liczba bloków) oraz plik docelowy, do którego będą umieszczane fragmenty
     void removeFragmentedFiles();
-    std::vector<char> getBlockBytes(Client& client, const std::string& fileName, const int& index);  
-    std::vector<int> getIndexesFromConfig(const std::string& fileName);                 // metoda zwracające indeksy fragmentów znajdujących się w pliku docelowym
+    std::vector<char> getBlockBytes(Client& client, const std::string& fileName, const int& index);
+    bool doesBlockExist(const std::string& fileName, const int& index);
+    std::vector<int> getIndexesFromConfig(const std::string& fileName);
+};
+
+class FileManagerException : public std::exception
+{
+    const std::string info;
+
+    public:
+    FileManagerException(const std::string& msg);
+    const char* what() const throw();
 };
 
 #endif

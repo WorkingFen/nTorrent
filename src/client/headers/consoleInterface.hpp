@@ -43,6 +43,7 @@ class Client::ConsoleInterface
     void processCommands(const char* buf);
     std::vector<std::string> splitBySpace(std::string input);       // pewnie powinno być w jakimś utils.h
     void handleInput(Client& client);
+    void printIncorrectCommand();
 
     void stopSeeding();
     void stopLeeching();
