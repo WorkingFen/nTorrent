@@ -179,18 +179,16 @@ void Client::handleMessagesfromServer()
             
 
         }
-        else if(msg.type == 202)
+        else if(msg.type == 202)                  // serwer wysłał info o bloku do pobrania
         {
             if(console->getMessageState() == MessageState::wait_for_block_info) // jeśli czekaliśmy na to info
             {
                 int fileNameLength = msg.readInt();                      // długość nazwy
                 std::string fileName = msg.readString(fileNameLength);   // nazwa pliku
                 int blockIndex = msg.readInt();                          // numer bloku
-                int hashLength = msg.readInt();                          // długość hashu
-                std::string hash = msg.readString(hashLength);           // nazwa pliku
-                int addressLength = msg.readInt();                       // długość adresu
-                std::string address = msg.readString(addressLength);     // adres
-                int port = msg.readInt();                                // port?
+                std::string hash = msg.readString(64);                   // nazwa pliku
+                int address = msg.readInt();                             // adres
+                int port = msg.readInt();                                // port
 
                 std::vector<int> indexes = fileManager->getIndexesFromConfig(fileName);
                 sendAskForBlock(mainServerSocket, fileName, indexes);   // wysyła zapytanie o blok 
