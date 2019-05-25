@@ -64,31 +64,31 @@ void Client::ConsoleInterface::handleInputConnected(Client &client, std::vector<
     {
         cout << "Jestes juz polaczony!" << endl;
     }
-    else if (firstArg == "ls")
-    {
-        client.fileManager->printFolderContent();
-    }
     else if (firstArg == "disconnect")
     {
         client.disconnect();
         state = State::up;
         messageState = MessageState::none;
     }
-    else if (firstArg == "quit")
+    else if (firstArg == "ls")
     {
-        state = State::down;
+        client.fileManager->printFolderContent();
     }
     else if (firstArg == "file_download")
     {
         fileDownload(client, input);
     }
-    else if (firstArg == "file_delete")
+    else if (firstArg == "file_delete" && (state == State::seeding || state == State::both))
     {
         fileDelete(client, input);
     }
     else if (firstArg == "file_add")
     {
         fileAdd(client, input);
+    }
+    else if (firstArg == "quit")
+    {
+        state = State::down;
     }
     else
     {
@@ -98,9 +98,9 @@ void Client::ConsoleInterface::handleInputConnected(Client &client, std::vector<
 
 void Client::ConsoleInterface::printHelp()
 {
-    cout     << "Lista komend:" << endl
-             << "help                        - wypisz liste dostepnych komend" << endl
-             << "ls                          - pokaz zawartosc katalogu z plikami, ktore udostepniasz" << endl;
+    cout << "Lista komend:" << endl
+         << "help                        - wypisz liste dostepnych komend" << endl
+         << "ls                          - pokaz zawartosc katalogu z plikami, ktore udostepniasz" << endl;
 
     if (state == State::up)
     {
@@ -118,7 +118,7 @@ void Client::ConsoleInterface::printHelp()
         cout << "file_delete <nazwa_pliku>   - przestań udostępniać plik" << endl;
     }
 
-        cout << "quit                        - wylacz program" << endl;
+    cout << "quit                        - wylacz program" << endl;
 }
 
 void Client::ConsoleInterface::fileDownload(Client &client, const std::vector<std::string> &input)
@@ -203,9 +203,11 @@ void Client::ConsoleInterface::handleInput(Client &client)
         vector<std::string> tokens = splitBySpace(input);
         if (tokens.size() == 0)
             tokens.push_back("");
+
         if (state == State::up)
             handleInputUp(client, tokens);
-        else if (state == State::connected || state == State::seeding || state == State::seeding || state == State::both)
+
+        else if (state == State::connected || state == State::seeding || state == State::leeching || state == State::both)
             handleInputConnected(client, tokens); // prawie takie same
     }
 }
