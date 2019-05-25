@@ -180,8 +180,11 @@ void Client::handleServerFileInfo(msg::Message msg)
     {
         int fileNameLength = msg.readInt();                    // długość nazwy
         std::string fileName = msg.readString(fileNameLength); // nazwa pliku
-        // TODO: sprawdzenie czy nazwa pliku się zgadza
 
+        if (fileName != console->getChosenFile()) // TODO: logi
+        {
+            return;
+        }
         int fileSize = msg.readInt(); // rozmiar pliku
         (void)fileSize;
         std::vector<int> indexes = fileManager->getIndexesFromConfig(fileName);
@@ -320,7 +323,7 @@ void Client::sendDeleteBlocks(std::string fileName)
 {
     std::vector<int> indexes = fileManager->getIndexesFromConfig(fileName);
 
-    for(auto index = indexes.begin(); index != indexes.end(); ++index)
+    for (auto index = indexes.begin(); index != indexes.end(); ++index)
     {
         sendDeleteBlock(mainServerSocket, fileName, *index);
     }
@@ -330,7 +333,7 @@ void Client::sendDeleteBlocks(std::string fileName)
 
 void Client::sendDeleteFile(std::string fileName)
 {
-    std::cout<<"fileDelete"<<std::endl;
+    std::cout << "fileDelete" << std::endl;
     msg::Message deleteBlock(103);
 
     deleteBlock.writeInt(fileName.size());
@@ -338,7 +341,6 @@ void Client::sendDeleteFile(std::string fileName)
 
     deleteBlock.sendMessage(mainServerSocket);
 }
-
 
 void Client::sendAskForFile(std::string fileName)
 {

@@ -132,6 +132,9 @@ void Client::ConsoleInterface::fileDownload(Client &client, const std::vector<st
         client.sendAskForFile(input[1]);                 // wysłanie żądania o plik do serwera
         messageState = MessageState::wait_for_file_info; // ustawienie stanu na czekanie na odpowiedź od serwera o pliku
         chosenFile = input[1];                           // zapisanie wybranego pliku
+    
+        if(state == State::seeding) state = State::both;
+        if(state == State::connected) state = State::leeching;
     }
 }
 
@@ -144,6 +147,10 @@ void Client::ConsoleInterface::fileDelete(Client &client, const std::vector<std:
     else
     {
         client.sendDeleteFile(input[1]); // wysłanie żądania o plik do serwera
+        // + zakończenie komunikacji z klientem?
+
+        // + ewentualna zmiana stanu: both->leeching lub seeding->connected, 
+        //   jeśli był to jedyny udostępniany plik 
     }
 }
 
@@ -156,6 +163,9 @@ void Client::ConsoleInterface::fileAdd(Client &client, const std::vector<std::st
     else
     {
         client.shareFile("clientFiles", input[1]); // wysłanie żądania o plik do serwera
+
+        if(state==State::leeching) state = State::both;
+        else if(state==State::connected) state = State::seeding;
     }
 }
 
