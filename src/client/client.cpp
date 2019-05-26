@@ -13,7 +13,7 @@
 
 using namespace msg;
 
-Client::Client(const char ipAddr[15], const int& port, const char serverIpAddr[15], const int& serverPort) : clientSocketsNum(0), serverSocketsNum(0), maxFd(0), console(std::unique_ptr<ConsoleInterface>(new ConsoleInterface)), fileManager(std::unique_ptr<FileManager>(new FileManager))
+Client::Client(const char ipAddr[15], const int& port, const char serverIpAddr[15], const int& serverPort) : seederSocketsNum(0), leecherSocketsNum(0), maxFd(0), console(std::unique_ptr<ConsoleInterface>(new ConsoleInterface)), fileManager(std::unique_ptr<FileManager>(new FileManager))
 {
     prepareSockaddrStruct(self, ipAddr, port);
     prepareSockaddrStruct(server, serverIpAddr, serverPort);
@@ -71,8 +71,9 @@ void Client::connectTo(const struct sockaddr_in &address)
         mainServerSocket = sock;
     else 
     {
-        clientSocketsNum++;
-        clientSockets.push_back(sock);              // TODO obsługa błędów
+        seederSocketsNum++;
+        seederSockets.push_back(FileSocket(sock));              // TODO obsługa błędów
+        std::cout << "seederSocketsNum: " << seederSocketsNum << std::endl;
     }
 
     maxFd = std::max(maxFd,sock+1);    
@@ -97,7 +98,6 @@ void Client::signal_waiter()
 
 void Client::setSigmask()
 {
-
     sigemptyset (&signal_set);
     sigaddset (&signal_set, SIGINT);
     int status = pthread_sigmask (SIG_BLOCK, &signal_set, NULL);
@@ -143,7 +143,7 @@ void Client::handleMessagesfromServer()
     if(msg_manager.assembleMsg(mainServerSocket))
     {
         msg::Message msg = msg_manager.readMsg(mainServerSocket);
-        std::cout << "Received from server: " << msg.type << std::endl;
+        //std::cout << "Received from server: " << msg.type << std::endl;
 
         if(msg.type == 211)                                // tu msg
         {
@@ -166,39 +166,116 @@ void Client::handleMessagesfromServer()
 
 }
 
-void Client::handleMessages()
+void Client::handleMessagesfromSeeders()
 {
-    for(auto it=serverSockets.begin(); it!=serverSockets.end();)                // pętla dla serverSockets -> TODO pętla dla cilentSockets
+    for(auto it=seederSockets.begin(); it!=seederSockets.end();)                // pętla dla leecherSockets -> TODO pętla dla cilentSockets
     {
-        if(FD_ISSET(*it, &ready) && msg_manager.assembleMsg(*it))
+        if(std::time(0) - it->last_activity > timeout)
         {
-            msg::Message msg = msg_manager.readMsg(*it);
+            msg::Message(111).sendMessage(it->sockFd);
 
-            std::cout << msg.type << std::endl;
-            if(msg.type == 111)                                // tu msg
-            {
-                close(*it);
-                it = serverSockets.erase(it);
-                serverSocketsNum--;
+            close(it->sockFd);
+            it = seederSockets.erase(it);
+            seederSocketsNum--;
+        }
+        if(FD_ISSET(it->sockFd, &ready))
+        {
+            std::cout << "last_active: " << it->last_activity << " ==> ";
+            it->last_activity = std::time(0);
+            std::cout << it->last_activity << std::endl;
 
-                std::cout << "Connection severed" << std::endl;
-            }
-            else if(msg.type == 301)
+            if(msg_manager.assembleMsg(it->sockFd))
             {
-                std::string filename = msg.readString(msg.readInt());
-                int block_index = msg.readInt();
+                msg::Message msg = msg_manager.readMsg(it->sockFd);
+                std::cout << "Received from seeder: " << msg.type << std::endl;
 
-                seedFile(*it, filename, block_index);
-            }
-            else
-            {
-                ++it;
+                std::cout << msg.type << std::endl;
+                if(msg.type == 111)                                // tu msg
+                {
+                    close(it->sockFd);
+                    it = seederSockets.erase(it);
+                    seederSocketsNum--;
+
+                    std::cout << "Connection severed" << std::endl;
+                }
+                else if(msg.type == 401)
+                {
+                    std::cout << "Fname: " << it->filename << "\nIndex: " << it->blockIndex << "\nBuffer length: " << msg.buffer.size() << " (" << msg.buf_length << ")" << std::endl;
+
+                    fileManager->putPiece(*this, it->filename, it->blockIndex, std::string(msg.buffer.begin(), msg.buffer.end()));
+
+                    msg::Message(111).sendMessage(it->sockFd);
+
+                    close(it->sockFd);
+                    it = seederSockets.erase(it);
+                    seederSocketsNum--;
+                }
+                else if(msg.type == 402)
+                {
+                    //ej serwer dałeś złego klienta
+
+                    msg::Message(111).sendMessage(it->sockFd);
+
+                    close(it->sockFd);
+                    it = seederSockets.erase(it);
+                    seederSocketsNum--;
+                }
+                else ++it;
             }
         }
-        else
+
+        ++it;
+    }
+}
+
+void Client::handleMessagesfromLeechers()
+{
+    for(auto it=leecherSockets.begin(); it!=leecherSockets.end();)                // pętla dla leecherSockets -> TODO pętla dla cilentSockets
+    {
+        if(std::time(0) - it->last_activity > timeout)
         {
-            ++it;
+            msg::Message(111).sendMessage(it->sockFd);
+
+            close(it->sockFd);
+            it = leecherSockets.erase(it);
+            leecherSocketsNum--;
         }
+
+        if(FD_ISSET(it->sockFd, &ready))
+        {
+            std::cout << "last_active: " << it->last_activity << " ==> ";
+            it->last_activity = std::time(0);
+            std::cout << it->last_activity << std::endl;
+            if(msg_manager.assembleMsg(it->sockFd))
+            {
+                msg::Message msg = msg_manager.readMsg(it->sockFd);
+
+                std::cout << "Received from leecher: " << msg.type << std::endl;
+
+                std::cout << msg.type << std::endl;
+                if(msg.type == 111)                                // tu msg
+                {
+                    close(it->sockFd);
+                    it = leecherSockets.erase(it);
+                    leecherSocketsNum--;
+
+                    std::cout << "Connection severed" << std::endl;
+                }
+                else if(msg.type == 301)
+                {
+                    std::string filename = msg.readString(msg.readInt());
+                    int block_index = msg.readInt();
+
+                    it->filename = filename;
+                    it->blockIndex = block_index;
+
+                    seedFile(it->sockFd, filename, block_index);
+                }
+                else ++it;
+            }
+        }
+
+        ++it;
     }
 }
 
@@ -318,8 +395,16 @@ void Client::sendBadBlockHash(int socket, std::string fileName, int blockIndex, 
     badBlockHash.sendMessage(socket);
 }
 
-void Client::leechFile(int socket, std::string filename, int blockIndex)
+void Client::leechFile(const char ipAddr[15], std::string filename, int blockIndex)
 {
+    struct sockaddr_in x;
+    prepareSockaddrStruct(x, ipAddr, 4400);   
+
+    connectTo(x);
+
+    seederSockets.back().filename = filename;
+    seederSockets.back().blockIndex = blockIndex;
+
     msg::Message leechMsg(301);
 
     leechMsg.writeInt(filename.size());         // file
@@ -327,17 +412,26 @@ void Client::leechFile(int socket, std::string filename, int blockIndex)
 
     leechMsg.writeInt(blockIndex);              // block    
 
-    leechMsg.sendMessage(socket);    
+    leechMsg.sendMessage(seederSockets.back().sockFd);    
 }
 
 void Client::seedFile(int socket, std::string filename, int blockIndex)
 {
-    msg::Message seedMsg(401);
+    if(fileManager->doesBlockExist(filename, blockIndex))
+    {
+        msg::Message seedMsg(401);
 
-    seedMsg.buffer = {'e','x','a','m','p','l','e'};
-    seedMsg.buf_length = seedMsg.buffer.size();
+        seedMsg.buffer = fileManager->getBlockBytes(*this, filename, blockIndex);
+        seedMsg.buf_length = seedMsg.buffer.size();
 
-    seedMsg.sendMessage(socket);
+        seedMsg.sendMessage(socket);
+    }
+    else
+    {
+        msg::Message seedMsg(402);
+
+        seedMsg.sendMessage(socket);
+    }
 }
 
 void Client::turnOff()
@@ -350,28 +444,28 @@ void Client::turnOff()
     if(result == -1)
         std::cerr<<"Closing "<< mainServerSocket <<" socket failed"<<std::endl;
 
-    for(auto it = clientSockets.begin(); it != clientSockets.end(); ++it){  // zamknięcie socketów
-		std::cout<<"Closing client socket ("<<*it<<")"<<std::endl;
+    for(auto it = seederSockets.begin(); it != seederSockets.end(); ++it){  // zamknięcie socketów
+		std::cout<<"Closing client socket ("<<it->sockFd<<")"<<std::endl;
 
-        msg::Message(111).sendMessage(*it);
-        result = close(*it);
+        msg::Message(111).sendMessage(it->sockFd);
+        result = close(it->sockFd);
         if(result == -1){
-            std::cerr<<"Closing "<<*it<<" socket failed"<<std::endl;
+            std::cerr<<"Closing "<<it->sockFd<<" socket failed"<<std::endl;
             continue;
         }
     }
 
-    for(auto it = serverSockets.begin(); it != serverSockets.end(); ++it){
-		std::cout<<"Closing server socket ("<<*it<<")"<<std::endl;
+    for(auto it = leecherSockets.begin(); it != leecherSockets.end(); ++it){
+		std::cout<<"Closing server socket ("<<it->sockFd<<")"<<std::endl;
 
-        msg::Message(111).sendMessage(*it);
-        result = close(*it);
+        msg::Message(111).sendMessage(it->sockFd);
+        result = close(it->sockFd);
 
         if(result == -1){
-            std::cerr<<"Closing "<<*it<<" socket failed"<<std::endl;
+            std::cerr<<"Closing "<<it->sockFd<<" socket failed"<<std::endl;
             continue;
         }
-        std::cout<<"losed "<<*it<<" server socket"<<std::endl;
+        std::cout<<"losed "<<it->sockFd<<" server socket"<<std::endl;
     }
 }
 
@@ -384,11 +478,11 @@ void Client::setFileDescrMask()
 
     if(mainServerSocket != -1) FD_SET(mainServerSocket, &ready);
 
-    for(const int &i : clientSockets)
-        FD_SET(i, &ready);
+    for(const auto &i : seederSockets)
+        FD_SET(i.sockFd, &ready);
 
-    for(const int &i : serverSockets)
-        FD_SET(i, &ready);
+    for(const auto &i : leecherSockets)
+        FD_SET(i.sockFd, &ready);
 }
 
 void Client::run()
@@ -408,17 +502,18 @@ void Client::run()
         if ( (select(maxFd, &ready, (fd_set *)0, (fd_set *)0, &to)) == -1)
              throw std::runtime_error ("select call failed");
 
-        if (FD_ISSET(sockFd, &ready) && serverSocketsNum<5)
+        if (FD_ISSET(sockFd, &ready) && leecherSocketsNum<5)
         {
             int newCommSock = accept(sockFd, (struct sockaddr *)0, (socklen_t *)0);
-            serverSockets.push_back(newCommSock);
-            serverSocketsNum++;
+            leecherSockets.push_back(newCommSock);
+            leecherSocketsNum++;
             maxFd = std::max(maxFd,newCommSock+1);
-            std::cout << "serverSocketsNum = " << serverSocketsNum << std::endl;
+            std::cout << "leecherSocketsNum = " << leecherSocketsNum << std::endl;
         }
 
         handleMessagesfromServer();
-        handleMessages();
+        handleMessagesfromSeeders();
+        handleMessagesfromLeechers();
         getUserCommands();
         handleCommands();
 

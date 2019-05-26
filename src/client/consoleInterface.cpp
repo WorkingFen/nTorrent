@@ -33,7 +33,13 @@ void Client::ConsoleInterface::handleInputUp(Client& client, std::vector<std::st
     }   else if (input[0] == "quit")
     {
         state = State::down;
-    }   else
+    }
+    else if (input[0] == "test")
+    {
+        client.leechFile("127.8.8.8", "witcher.jpg", stoi(input[1]));
+        //state = State::down;
+    }      
+    else
     {
         cout << "Nieprawidlowa komenda! Wpisz 'help', aby zobaczyc liste komend." << endl;
     }
@@ -65,10 +71,9 @@ void Client::ConsoleInterface::handleInputConnected(Client& client, std::vector<
     }   else if (input[0] == "quit")
     {
         state = State::down;
-    }   else if (input[0] == "file_download")
-    {
-        state = State::down;
-    }   else
+    }   
+
+    else
     {
         cout << "Nieprawidlowa komenda! Wpisz 'help', aby zobaczyc liste komend." << endl;
     }

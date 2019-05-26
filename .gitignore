@@ -35,3 +35,5 @@ runClient
 
 # VS Code files
 .vscode/
+
+src/bin/

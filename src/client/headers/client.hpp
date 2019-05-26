@@ -18,16 +18,31 @@ class Client
     private:
         class ConsoleInterface;
         class FileManager;
-        int pieceSize = 10;
+        int pieceSize = 400000;
 
-        int sockFd, port, clientSocketsNum, serverSocketsNum, maxFd;        // listen socket; przydzielony port efemeryczny; liczba socketów pobierających/wysyłających dane (nie licząc komunikacji z serwerem)
+        int sockFd, port, seederSocketsNum, leecherSocketsNum, maxFd;        // listen socket; przydzielony port efemeryczny; liczba socketów pobierających/wysyłających dane (nie licząc komunikacji z serwerem)
         struct sockaddr_in self, server;
         fd_set ready;
         struct timeval to;
 
         int mainServerSocket = -1;
-        std::list<int> clientSockets;                             // lista z socketami pełniącymi role leechów/peerów
-        std::list<int> serverSockets;                             // lista z socketami pełniącymi role seederów/peerów    
+        struct FileSocket
+        {
+            int sockFd;
+
+            std::string filename = std::string();
+            int blockIndex = -1;
+
+            std::string hash;
+            std::time_t last_activity = std::time(0);
+
+            FileSocket() {}
+            FileSocket(int i): sockFd(i) {}
+        };
+
+        std::list<FileSocket> seederSockets;                             // lista z socketami pełniącymi role leechów/peerów
+        std::list<FileSocket> leecherSockets;                             // lista z socketami pełniącymi role seederów/peerów  
+        std::time_t timeout = 20;  
 
         std::thread input;
         msg::MessageManager msg_manager;
@@ -45,7 +60,8 @@ class Client
         void prepareSockaddrStruct(struct sockaddr_in& x, const char ipAddr[15], const int& port);
 
         void handleMessagesfromServer(); 
-        void handleMessages();
+        void handleMessagesfromLeechers();
+        void handleMessagesfromSeeders();
         void getUserCommands();
         void handleCommands();
 
@@ -69,13 +85,10 @@ class Client
         void sendHaveBlock(int socket, std::string fileName, int blockIndex, std::string hash);
         void sendAskForBlock(int socket, std::string fileName, std::vector<int> blockList);
         void sendBadBlockHash(int socket, std::string fileName, int blockIndex, std::string seederAdress);
-        void leechFile(int socket, std::string filename, int blockIndex);
+        void leechFile(const char ipAddr[15], std::string filename, int blockIndex);
         void seedFile(int socket, std::string filename, int blockIndex);
 
         void run();                                                   // pętla z selectem
-
-
-
 };
 
 #endif
