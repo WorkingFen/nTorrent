@@ -16,9 +16,13 @@
 #include <chrono>
 #include "../../message/message.hpp"
 
-#define SRVNOCONN 404
-#define SRVNORM 1
-#define SRVERROR -1
+#define SRV_NOCONN 404
+#define SRV_OK 1
+#define SRV_ERROR -1
+
+#define MSG_OK 1
+#define MSG_RNGERROR 0
+#define MSG_ERROR -1
 
 #define LOGS
 
@@ -37,17 +41,22 @@
     #ifndef KEEPALIVE
         #define KEEPALIVE
     #endif
+    #ifndef FILES
+        #define FILES
+    #endif
 #endif
 
 namespace server {
+typedef std::chrono::high_resolution_clock::time_point t_point;
+
     struct client {
         sockaddr_in address;            // Client IP:port
         int socket;                     // Client's socket
         int no_leeches;                 // Number of active leeches
-        int timeout;                    // Time after which connection should end   // ?
+        t_point timeout;                // Time of last connection check
 
         client() {}
-        client(sockaddr_in addr, int s, int t = 0, int nl = 0): 
+        client(sockaddr_in addr, int s, int nl = 0, t_point t = std::chrono::high_resolution_clock::now()): 
             address(addr), socket(s), no_leeches(nl), timeout(t) {}
     };
 
@@ -55,11 +64,12 @@ typedef std::list<client> cts_list;
 typedef std::list<client>::iterator cts_list_it;
 
     struct block {
+        bool empty;
         std::string hash;               // Block hash
-        std::vector<client> owners;     // Vector of clients who do have this block
+        std::vector<client*> owners;    // Vector of clients who do have this block
 
-        block() {}
-        block(std::string h): hash(h) {}
+        block() : empty(true) {}
+        block(std::string h): empty(false), hash(h) {}
     };
     
     struct file {
@@ -103,18 +113,23 @@ typedef std::list<client>::iterator cts_list_it;
             Server(const char srv_ip[15], const int& srv_port);
             ~Server();
 
-            file* add_file(std::string);
             file* add_file(int, std::string);
             block* add_block(file&, std::string);
-            bool add_block(file&, std::string, uint);
-            void add_owner(block&, client);
+            int add_block_owner(file&, std::string, uint);
+            void add_owner(block&, client*);
 
+            file* get_file(std::string);
             block* get_block(file&, uint);
 
-            void delete_file(std::map<std::string, server::file>::iterator);
+            void delete_file(file&);
             bool delete_block(file&, int);
             bool delete_owner(block&);
+            bool delete_owner(block&, uint, int);
 
+            std::pair<client*, int> find_least_occupied(file&, std::vector<int>);
+
+            void run_srv();
+            void close_srv();
             void socket_srv();
             void bind_srv(const char srv_ip[15], const int& srv_port);
             void listen_srv();

@@ -241,5 +241,5 @@ FileManagerException::FileManagerException(const std::string& msg) : info("FileM
 
 const char* FileManagerException::what() const throw()
 {
-    return info.c_str();
+    return ("FileManager Exception: " + info).c_str();
 }
