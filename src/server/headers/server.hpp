@@ -41,8 +41,8 @@
     #ifndef KEEPALIVE
         #define KEEPALIVE
     #endif
-    #ifndef EXPERT
-        #define EXPERT
+    #ifndef FILES
+        #define FILES
     #endif
 #endif
 

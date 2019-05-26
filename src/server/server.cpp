@@ -129,16 +129,47 @@ bool server::Server::delete_owner(server::block& c_block, int ip, int port) {
     else return false;
 }
 
+// Get least occupied seeder and its block which client doesn't have
 std::pair<server::client*, int> server::Server::find_least_occupied(server::file& c_file, std::vector<int> no_blocks) {
-    client* best_ct = c_file.blocks[0].owners.front();
-    int best_no = 0;
+    client* best_ct;
+    int best_no;
+    bool got;
 
-    for(uint i = 0; i < c_file.blocks.size(); i++) {
-        if(!no_blocks.empty()) for(uint tmp : no_blocks) if(tmp == i) continue;
+    for(uint i = 0; i <= c_file.blocks.size(); i++) {
+        if(i == c_file.blocks.size()) return std::pair<client*, int>({nullptr,i});
+        if(!c_file.blocks[i].empty) {
+            got = false;
+            if(!no_blocks.empty()) {
+                for(uint tmp : no_blocks)
+                    if(tmp == i) {
+                        got = true;
+                        break;
+                    }
+            }
+            if(got) continue;
+            best_ct = c_file.blocks[i].owners.front();
+            best_no = i;
+            if(best_ct->no_leeches == 0) return std::pair<client*, int>({best_ct, best_no});
+            break;
+        }
+    }
+    
+    for(uint i = best_no + 1; i < c_file.blocks.size(); i++) {
+        if(c_file.blocks[i].empty) continue;
 
+        got = false;
+        if(!no_blocks.empty()) {
+            for(uint tmp : no_blocks)
+                if(tmp == i) {
+                    got = true;
+                    break;
+                }
+        }
+        if(got) continue;
+        
         for(auto j : c_file.blocks[i].owners) {
             if(j->no_leeches == 0) return std::pair<client*, int>({j,i});
-            else if(best_ct->no_leeches >= j->no_leeches) {
+            else if(best_ct->no_leeches > j->no_leeches) {
                 best_ct = j;
                 best_no = i;
             }
@@ -286,7 +317,7 @@ int server::Server::read_srv() {
 #endif        
         return SRV_ERROR;
     }
-    /*else if(msg.type == 101) {
+    else if(msg.type == 101) {
         file* foo = add_file(msg.readInt(), msg.readString(msg.readInt()));  // Weird specification of C++ compiler?
         for(int i = 0; msg.buf_length > 0; i++) {
             block* bar = add_block(*foo, msg.readString(64));
@@ -299,7 +330,7 @@ int server::Server::read_srv() {
         for(auto i : foo->blocks)
             std::cout << "Piece hash: " << i.hash << std::endl;
 #endif
-#ifdef EXPERT
+#ifdef FILES
         for(auto i : files) {
             std::cout << std::endl << "File: " << i.second.name << std::endl;
             for(uint j = 0; j < i.second.blocks.size(); j++) {
@@ -310,7 +341,7 @@ int server::Server::read_srv() {
             }
         }
 #endif
-    }*/
+    }
     // List all files
     else if(msg.type == 102) {
 #ifdef LOGS
@@ -379,28 +410,32 @@ int server::Server::read_srv() {
 #endif
         }
     }
-    /*else if(msg.type == 106) {
+    // Give client information about block to download
+    else if(msg.type == 106) {
 #ifdef LOGS
         std::cout << std::endl << "Message type: " << msg.type << std::endl;
 #endif
         file* c_file = get_file(msg.readString(msg.readInt()));
         if(c_file == nullptr) {}                // Error
         else {
-            std::vector<int> blocks_no = std::vector<int>();
+            std::vector<int> blocks_no;
             while(msg.buf_length > 0)
                 blocks_no.push_back(msg.readInt());
             auto bar = find_least_occupied(*c_file, blocks_no);
-            bar.first->no_leeches++;
-            msg::Message file_info(202);
-            file_info.writeInt(c_file->name.size());
-            file_info.writeString(c_file->name);
-            file_info.writeInt(bar.second);
-            file_info.writeString(c_file->blocks[bar.second].hash);
-            file_info.writeInt(bar.first->address.sin_addr.s_addr);
-            file_info.writeInt(bar.first->address.sin_port);
-            file_info.sendMessage(cts_it->socket);
+            if(bar.first == nullptr) {}         // Error
+            else {
+                bar.first->no_leeches++;
+                msg::Message file_info(202);
+                file_info.writeInt(c_file->name.size());
+                file_info.writeString(c_file->name);
+                file_info.writeInt(bar.second);
+                file_info.writeString(c_file->blocks[bar.second].hash);
+                file_info.writeInt(bar.first->address.sin_addr.s_addr);
+                file_info.writeInt(bar.first->address.sin_port);
+                file_info.sendMessage(cts_it->socket);
+            }
         }
-    }*/
+    }
     // Wrong hash from seeder
     else if(msg.type == 107) {
         file* e_file = get_file(msg.readString(msg.readInt()));
