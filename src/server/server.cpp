@@ -38,6 +38,7 @@ void server::Server::shutdown() {
     close(listener);
 }
 
+// Add new file and get it's pointer or get existing pointer
 server::file* server::Server::add_file(int size, std::string name) {
     auto e_file = files.find(name);
     if(e_file != files.end()) return &(e_file->second);
@@ -47,14 +48,17 @@ server::file* server::Server::add_file(int size, std::string name) {
     return &(i_file.first->second);
 }
 
-server::block* server::Server::add_block(server::file& c_file, std::string hash) {
-    for(uint i = 0; i < c_file.blocks.size(); i++) 
-        if(c_file.blocks[i].hash == hash) 
-            return &c_file.blocks[i];
-
-    block n_block(hash);
-    c_file.blocks.push_back(n_block);
-    return &(c_file.blocks.back());
+// Add new block and get it's pointer or get existing pointer
+server::block* server::Server::add_block(server::file& c_file, std::string hash, uint no) {
+    if(no < c_file.blocks.size()) { 
+        if(c_file.blocks[no].hash == hash) return &c_file.blocks[no];
+        else return nullptr;
+    }
+    else {
+        block n_block(hash);
+        c_file.blocks.push_back(n_block);
+        return &(c_file.blocks.back());
+    }
 }
 
 // Add new owner if block information is correct 
@@ -317,17 +321,19 @@ int server::Server::read_srv() {
 #endif        
         return SRV_ERROR;
     }
+    // Share file
     else if(msg.type == 101) {
-        file* foo = add_file(msg.readInt(), msg.readString(msg.readInt()));  // Weird specification of C++ compiler?
-        for(int i = 0; msg.buf_length > 0; i++) {
-            block* bar = add_block(*foo, msg.readString(64));
-            add_owner(*bar, &*cts_it);
+        file* c_file = add_file(msg.readInt(), msg.readString(msg.readInt()));  // Weird specification of C++ compiler?
+        for(int no_block = 0; msg.buf_length > 0; no_block++) {
+            block* c_block = add_block(*c_file, msg.readString(64), no_block);
+            if(c_block == nullptr) {}             // Error
+            else add_owner(*c_block, &*cts_it);
         }
 #ifdef LOGS
         std::cout << std::endl << "Message type: " << msg.type << std::endl;
-        std::cout << "File name: " << foo->name << std::endl;
-        std::cout << "File size: " << foo->size << std::endl;
-        for(auto i : foo->blocks)
+        std::cout << "File name: " << c_file->name << std::endl;
+        std::cout << "File size: " << c_file->size << std::endl;
+        for(auto i : c_file->blocks)
             std::cout << "Piece hash: " << i.hash << std::endl;
 #endif
 #ifdef FILES
@@ -421,17 +427,17 @@ int server::Server::read_srv() {
             std::vector<int> blocks_no;
             while(msg.buf_length > 0)
                 blocks_no.push_back(msg.readInt());
-            auto bar = find_least_occupied(*c_file, blocks_no);
-            if(bar.first == nullptr) {}         // Error
+            auto lo_ct = find_least_occupied(*c_file, blocks_no);
+            if(lo_ct.first == nullptr) {}         // Error
             else {
-                bar.first->no_leeches++;
+                lo_ct.first->no_leeches++;
                 msg::Message file_info(202);
                 file_info.writeInt(c_file->name.size());
                 file_info.writeString(c_file->name);
-                file_info.writeInt(bar.second);
-                file_info.writeString(c_file->blocks[bar.second].hash);
-                file_info.writeInt(bar.first->address.sin_addr.s_addr);
-                file_info.writeInt(bar.first->address.sin_port);
+                file_info.writeInt(lo_ct.second);
+                file_info.writeString(c_file->blocks[lo_ct.second].hash);
+                file_info.writeInt(lo_ct.first->address.sin_addr.s_addr);
+                file_info.writeInt(lo_ct.first->address.sin_port);
                 file_info.sendMessage(cts_it->socket);
             }
         }

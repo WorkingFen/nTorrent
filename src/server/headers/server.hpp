@@ -96,7 +96,7 @@ typedef std::list<client>::iterator cts_list_it;
 
             timeval timeout;                        // Timeout for select_ct()          // ?
             
-            std::map<std::string, file> files;      // Vector of files
+            std::map<std::string, file> files;      // Map of files
             msg::MessageManager msg_manager;
 #ifdef CTNAME
             char host[NI_MAXHOST];
@@ -114,7 +114,7 @@ typedef std::list<client>::iterator cts_list_it;
             ~Server();
 
             file* add_file(int, std::string);
-            block* add_block(file&, std::string);
+            block* add_block(file&, std::string, uint);
             int add_block_owner(file&, std::string, uint);
             void add_owner(block&, client*);
 
