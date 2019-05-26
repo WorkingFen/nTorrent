@@ -221,6 +221,22 @@ std::vector<int> Client::FileManager::getIndexesFromConfig(const std::string& fi
     return indexes;
 }
 
+void Client::FileManager::copyFile(const std::string& absoluteFilePath, const std::string& newFileName)
+{
+    std::ifstream oldFile;
+    oldFile.open(absoluteFilePath);
+
+    if(!oldFile.is_open())
+    {
+        std::cerr << absoluteFilePath << " " << " could not be found" << std::endl;
+        return;
+    }
+
+    std::ofstream newFile((std::string(fileDirName) + "/" + newFileName), std::ios::app);
+
+    newFile << oldFile.rdbuf();
+}
+
 FileManagerException::FileManagerException(const std::string& msg) : info("FileManager Exception: " + msg) {}
 
 const char* FileManagerException::what() const throw()
