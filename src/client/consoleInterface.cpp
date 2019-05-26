@@ -237,6 +237,11 @@ State Client::ConsoleInterface::getState()
     return state;
 }
 
+void Client::ConsoleInterface::setState(State newState)
+{
+    state = newState;
+}
+
 MessageState Client::ConsoleInterface::getMessageState()
 {
     return messageState;

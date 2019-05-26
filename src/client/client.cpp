@@ -277,6 +277,8 @@ void Client::shareFiles()
 
     for (std::string fname : file_names)
         shareFile("clientFiles", fname);
+ 
+    if(file_names.size() > 0) console->setState(State::seeding);
 }
 
 void Client::sendFileInfo(int socket, std::string directory, std::string fname)
