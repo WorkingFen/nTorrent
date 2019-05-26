@@ -111,7 +111,7 @@ void Client::ConsoleInterface::printHelp()
     {
         cout << "disconnect                  - rozlacz sie z serwerem" << endl;
         cout << "file_download <nazwa_pliku> - pobierz plik" << endl;
-        cout << "file_add <nazwa_pliku>      - zacznij udostępniać plik" << endl;
+        cout << "file_add <pelna_sciezka_pliku> <docelowa_nazwa_pliku>      - zacznij udostępniać plik" << endl;
     }
     if (state == State::seeding || state == State::both)
     {
@@ -156,13 +156,14 @@ void Client::ConsoleInterface::fileDelete(Client &client, const std::vector<std:
 
 void Client::ConsoleInterface::fileAdd(Client &client, const std::vector<std::string> &input)
 {
-    if (input.size() < 2)
+    if (input.size() < 3)
     {
         printIncorrectCommand();
     }
     else
     {
-        client.shareFile("clientFiles", input[1]); // wysłanie żądania o plik do serwera
+        client.fileManager->copyFile(input[1], input[2]);
+        client.shareFile("clientFiles", input[2]); // wysłanie żądania o plik do serwera
 
         if(state==State::leeching) state = State::both;
         else if(state==State::connected) state = State::seeding;

@@ -178,7 +178,8 @@ void Client::handleServerFileInfo(msg::Message msg)
 {
     if (console->getMessageState() == MessageState::wait_for_file_info) // jeśli czekaliśmy na to info
     {
-        int fileNameLength = msg.readInt();                    // długość nazwy
+        int fileNameLength = msg.readInt(); // długość nazwy
+
         std::string fileName = msg.readString(fileNameLength); // nazwa pliku
 
         if (fileName != console->getChosenFile()) // TODO: logi
@@ -186,8 +187,21 @@ void Client::handleServerFileInfo(msg::Message msg)
             return;
         }
         int fileSize = msg.readInt(); // rozmiar pliku
+
+        fileManager->createConfig(*this, fileName, fileSize);
+
         (void)fileSize;
-        std::vector<int> indexes = fileManager->getIndexesFromConfig(fileName);
+        std::vector<int> indexes;
+        try
+        {
+            indexes = fileManager->getIndexesFromConfig(fileName);
+        }
+        catch (const std::exception &e)
+        {
+            std::cerr << e.what() << '\n';
+            return;
+        }
+
         sendAskForBlock(mainServerSocket, fileName, indexes); // wysyła zapytanie o blok
 
         console->setMessageState(MessageState::wait_for_block_info); // ustaw stan na oczekiwanie na informację skąd pobrać blok
@@ -277,8 +291,9 @@ void Client::shareFiles()
 
     for (std::string fname : file_names)
         shareFile("clientFiles", fname);
- 
-    if(file_names.size() > 0) console->setState(State::seeding);
+
+    if (file_names.size() > 0)
+        console->setState(State::seeding);
 }
 
 void Client::sendFileInfo(int socket, std::string directory, std::string fname)
