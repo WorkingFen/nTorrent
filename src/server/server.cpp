@@ -187,11 +187,19 @@ std::pair<server::client*, int> server::Server::find_least_occupied(server::file
     return std::pair<client*, int>({best_ct,best_no});
 }
 
-server::Server::Server(const char srv_ip[15], const int& srv_port) : sigint_flag(false) {
+// Check if client is still alive
+bool server::Server::still_alive() {
+    t_point now = std::chrono::high_resolution_clock::now();
+    auto rslt = std::chrono::duration_cast<std::chrono::seconds>(now - cts_it->timeout);
+    if(rslt >= timesup) return false;
+    else return true;
+}
+
+server::Server::Server(const char srv_ip[15], const int& srv_port) : timesup(8), sigint_flag(false) {
     set_SIGmask();
     signal_thread = std::thread(&Server::signal_waiter, this);
 
-    timeout.tv_sec = 120;
+    timeout.tv_sec = 1;
     timeout.tv_usec = 0;
 
     socket_srv();
@@ -299,6 +307,10 @@ void server::Server::accept_srv() {
 // Check clients' messages
 void server::Server::check_cts() {
     for(cts_it = clients.begin(); cts_it != clients.end(); ) {
+        if(!still_alive()) {
+            close_ct();
+            continue;
+        }
         if(FD_ISSET(cts_it->socket, &bits_fd)) {
             int bytes_rcv = read_srv();
             if(bytes_rcv == SRV_ERROR || bytes_rcv == SRV_NOCONN) {
