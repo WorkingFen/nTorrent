@@ -108,10 +108,14 @@ bool server::Server::delete_block(server::file& c_file, int no) {
     return true;
 }
 
+// Delete current client from owners list if block isn't empty and it's in there, then check if
+// block's owners vector isn't empty
 bool server::Server::delete_owner(server::block& c_block) {
-    for(auto i = c_block.owners.begin(); i != c_block.owners.end(); i++)
-        if(&(*i)->socket == &cts_it->socket) {
-            c_block.owners.erase(i);
+    if(c_block.empty) return false;
+
+    for(auto c_owner = c_block.owners.begin(); c_owner != c_block.owners.end(); c_owner++)
+        if(&(*c_owner)->socket == &cts_it->socket) {
+            c_block.owners.erase(c_owner);
             break;
         }
     
@@ -326,7 +330,7 @@ int server::Server::read_srv() {
         file* c_file = add_file(msg.readInt(), msg.readString(msg.readInt()));  // Weird specification of C++ compiler?
         for(int no_block = 0; msg.buf_length > 0; no_block++) {
             block* c_block = add_block(*c_file, msg.readString(64), no_block);
-            if(c_block == nullptr) {}             // Error
+            if(c_block == nullptr) {}             // Error: Hashes don't match
             else add_owner(*c_block, &*cts_it);
         }
 #ifdef LOGS
@@ -361,29 +365,38 @@ int server::Server::read_srv() {
                 file_list.writeInt(c_file.second.size);
                 file_list.sendMessage(cts_it->socket);
             }
-        else {}            // Error
+        else {}            // Error: There are no files
     }
-    /*else if(msg.type == 103) {
-        auto foo = files.find(msg.readString(msg.readInt()));
-        int no_block = msg.readInt();
-        if(delete_owner(*get_block(foo->second, no_block)) && delete_block(foo->second, no_block)){
-            std::string name = foo->second.name;
-            delete_file(foo);
+
+    else if(msg.type == 103) {
+        file* e_file = get_file(msg.readString(msg.readInt()));
+        if(e_file == nullptr) {}        // Error: There is no file with this name
+        else {
+            block* e_block;
+            for(uint no_block = 0; no_block < e_file->blocks.size(); no_block++) {
+                e_block = &(e_file->blocks[no_block]);
+                if(delete_owner(*e_block) && delete_block(*e_file, no_block)){
 #ifdef LOGS
-            std::cout << std::endl << "File " << name << " has been deleted" << std::endl;
+                    std::string name = e_file->name;
 #endif
+                    delete_file(*e_file);   
+#ifdef LOGS
+                    std::cout << std::endl << "File " << name << " has been deleted" << std::endl;
+#endif
+                }
+            }
         }
 #ifdef LOGS
         std::cout << std::endl << "Message type: " << msg.type << std::endl;
 #endif
-    }*/
+    }
     // File download request
     else if(msg.type == 104) {
 #ifdef LOGS
         std::cout << std::endl << "Message type: " << msg.type << std::endl;
 #endif
         file* c_file = get_file(msg.readString(msg.readInt()));
-        if(c_file == nullptr) {}            // Error
+        if(c_file == nullptr) {}            // Error: There is no file with this name
         else {
             msg::Message file_cfg(201);
             file_cfg.writeInt(c_file->name.size());
@@ -395,16 +408,16 @@ int server::Server::read_srv() {
     // Inform about block possession
     else if(msg.type == 105) {
         file* c_file = get_file(msg.readString(msg.readInt()));
-        if(c_file == nullptr) {}            // Error
+        if(c_file == nullptr) {}            // Error: There is no file with this name
         else {
             int no_block = msg.readInt();
             switch(add_block_owner(*c_file, msg.readString(64), no_block)) {
                 case MSG_RNGERROR: {
-                            // Error
+                            // Error: There is no block in that position
                     break;
                 }
                 case MSG_ERROR: {
-                            // Error
+                            // Error: Hashes don't match
                     break;
                 }
             }
@@ -422,13 +435,13 @@ int server::Server::read_srv() {
         std::cout << std::endl << "Message type: " << msg.type << std::endl;
 #endif
         file* c_file = get_file(msg.readString(msg.readInt()));
-        if(c_file == nullptr) {}                // Error
+        if(c_file == nullptr) {}                // Error: There is no file with this name
         else {
             std::vector<int> blocks_no;
             while(msg.buf_length > 0)
                 blocks_no.push_back(msg.readInt());
             auto lo_ct = find_least_occupied(*c_file, blocks_no);
-            if(lo_ct.first == nullptr) {}         // Error
+            if(lo_ct.first == nullptr) {}         // Error: There are no blocks that could be downloaded
             else {
                 lo_ct.first->no_leeches++;
                 msg::Message file_info(202);
@@ -445,7 +458,7 @@ int server::Server::read_srv() {
     // Wrong hash from seeder
     else if(msg.type == 107) {
         file* e_file = get_file(msg.readString(msg.readInt()));
-        if(e_file == nullptr) {}           // Error
+        if(e_file == nullptr) {}           // Error: There is no file with this name
         else {
             int no_block = msg.readInt();
             int o_addr = msg.readInt();
@@ -454,7 +467,7 @@ int server::Server::read_srv() {
             std::cout << std::endl << o_addr << ":" << o_port << std::endl;
 #endif
             block* e_block = get_block(*e_file, no_block);
-            if(e_block == nullptr) {}       // Error
+            if(e_block == nullptr) {}       // Error: There is no block in that position
             else {
                 if(delete_owner(*e_block, o_addr, o_port) && delete_block(*e_file, no_block)){
 #ifdef LOGS
