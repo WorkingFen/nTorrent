@@ -124,7 +124,7 @@ typedef std::list<client>::iterator cts_list_it;
             void delete_file(file&);
             bool delete_block(file&, int);
             bool delete_owner(block&);
-            bool delete_owner(block&, int, int);
+            bool delete_owner(block&, uint, int);
 
             std::pair<client*, int> find_least_occupied(file&, std::vector<int>);
 

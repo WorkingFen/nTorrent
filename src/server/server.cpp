@@ -116,7 +116,7 @@ bool server::Server::delete_owner(server::block& c_block) {
 }
 
 // Delete owner if it exists and if block isn't empty, then check if block's owners vector isn't empty
-bool server::Server::delete_owner(server::block& c_block, int ip, int port) {
+bool server::Server::delete_owner(server::block& c_block, uint ip, int port) {
     if(c_block.empty) return false;
 
     for(auto c_owner = c_block.owners.begin(); c_owner != c_block.owners.end(); c_owner++)
