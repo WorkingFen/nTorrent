@@ -31,7 +31,7 @@ class Client::FileManager
     void createConfig(Client& client, const std::string& fileName, const off_t& fileSize);                 // metoda tworząca plik konfiguracyjny (na jego początku docelowa liczba bloków) oraz plik docelowy, do którego będą umieszczane fragmenty
     void removeFragmentedFiles();
     std::vector<char> getBlockBytes(Client& client, const std::string& fileName, const int& index);
-    bool doesBlockExist(const std::string& fileName, const int& index);
+    bool doesBlockExist(Client& client, const std::string& fileName, const int& index);
     std::vector<int> getIndexesFromConfig(const std::string& fileName);
 };
 

@@ -421,9 +421,9 @@ void Client::run()
 }
 
 
-ClientException::ClientException(const std::string& msg) : info(msg) {}
+ClientException::ClientException(const std::string& msg) : info("Client Exception: " + msg) {}
 
 const char* ClientException::what() const throw()
 {
-    return ("Client Exception: " + info).c_str();
+    return info.c_str();
 }

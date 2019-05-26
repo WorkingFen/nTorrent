@@ -15,7 +15,12 @@ void Client::FileManager::removeFileIfFragmented(const std::string& fileName)
     std::string path(fileDirName);
     path = path + "/" + fileName;
 
-    std::ifstream inFile(path + ".conf"); 
+    std::ifstream inFile;
+    inFile.open(path + ".conf");
+
+    if(!inFile.is_open())
+        throw FileManagerException ("File: " + path + ".conf could not be opened.");
+
     int downloadedBlocksNumber = std::count(std::istreambuf_iterator<char>(inFile), std::istreambuf_iterator<char>(), '\n') - 1;
     int defaultBlocksNumber;
     inFile.seekg(0);
@@ -86,13 +91,16 @@ off_t Client::FileManager::getFileSize(const std::string& filename)
     return fileStats.st_size;
 }
 
-void Client::FileManager::putPiece(Client& client, const std::string& fileName, const int& index, const std::string& pieceData) {      //Dla każdego pobieranego pliku tworzy plik.conf
-    // chyba na starcie programu trzeba czyścić katalogi z niekompletnymi plikami i .conf
-
+void Client::FileManager::putPiece(Client& client, const std::string& fileName, const int& index, const std::string& pieceData) 
+{
     std::string path(fileDirName);
     path = path + "/" + fileName;
 
-	std::fstream filePieces(path);
+	std::fstream filePieces;
+    filePieces.open(path);
+
+    if(!filePieces.is_open())
+        throw FileManagerException ("File: " + path + " could not be opened.");
 
 	off_t offset = index * client.pieceSize;
 	filePieces.seekp(long(offset), std::ios_base::beg);
@@ -101,7 +109,11 @@ void Client::FileManager::putPiece(Client& client, const std::string& fileName, 
 
 	filePieces.close();
 
-	std::ofstream configFile((path + ".conf"), std::ios::app);
+	std::ofstream configFile;
+    configFile.open(path + ".conf");
+
+    if(!configFile.is_open())
+        throw FileManagerException ("File: " + path + ".conf could not be opened.");
 
 	configFile << index;
 	configFile << std::endl;
@@ -152,7 +164,12 @@ void Client::FileManager::removeFragmentedFiles()
 
 std::vector<char> Client::FileManager::getBlockBytes(Client& client, const std::string& fileName, const int& index)
 {
-    std::fstream file(std::string(fileDirName) + "/" + fileName);
+    std::string path = std::string(fileDirName) + "/" + fileName;
+    std::fstream file;
+    file.open(path);
+    
+    if(!file.is_open())
+        throw FileManagerException("File: " + path + " could not be opened.");
 
 	off_t offset = index * client.pieceSize;
 	file.seekp(long(offset), std::ios_base::beg);
@@ -163,18 +180,33 @@ std::vector<char> Client::FileManager::getBlockBytes(Client& client, const std::
     return bytes;
 }
 
-bool Client::FileManager::doesBlockExist(const std::string& fileName, const int& index)
+bool Client::FileManager::doesBlockExist(Client& client, const std::string& fileName, const int& index)
 {
-    std::fstream file(std::string(fileDirName) + "/" + fileName + ".conf");
-    std::istream_iterator<int> begin(file);
-    std::istream_iterator<int> end;
+    std::fstream file;
+    file.open(std::string(fileDirName) + "/" + fileName + ".conf");
 
-    return std::find(++begin, end, index) != end;         // poszukiwanie od 2 liczby, bo początek to docelowa liczba bloków
+    if(file.is_open())
+    {
+        std::istream_iterator<int> begin(file);
+        std::istream_iterator<int> end;
+        return std::find(++begin, end, index) != end;         // poszukiwanie od 2 liczby, bo początek to docelowa liczba bloków
+    }
+    else
+    {
+        return index * client.pieceSize < getFileSize(fileName);
+    }
+    
 }
 
 std::vector<int> Client::FileManager::getIndexesFromConfig(const std::string& fileName)
 {
-    std::fstream file(std::string(fileDirName) + "/" + fileName + ".conf");
+    std::string path = std::string(fileDirName) + "/" + fileName + ".conf";
+    std::fstream file;
+    file.open(path);
+
+    if(!file.is_open())
+        throw FileManagerException ("File: " + path + " could not be opened.");
+    
     std::vector<int> indexes;
     int index;
     file >> index;
@@ -185,9 +217,9 @@ std::vector<int> Client::FileManager::getIndexesFromConfig(const std::string& fi
     return indexes;
 }
 
-FileManagerException::FileManagerException(const std::string& msg) : info(msg) {}
+FileManagerException::FileManagerException(const std::string& msg) : info("FileManager Exception: " + msg) {}
 
 const char* FileManagerException::what() const throw()
 {
-    return ("FileManager Exception: " + info).c_str();
+    return info.c_str();
 }
