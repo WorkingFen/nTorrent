@@ -535,7 +535,7 @@ void Client::seedFile(int socket, std::string filename, int blockIndex)
     }
 }
 
-void Client::turnOff()
+void Client::disconnect()
 {
     int result;
 
