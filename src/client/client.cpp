@@ -385,7 +385,7 @@ void Client::sendAskForBlock(int socket, std::string fileName, vector<int> block
 
 void Client::sendBadBlockHash(int socket, std::string fileName, int blockIndex, int seederAddress, int seederPort)
 {
-    msg::Message badBlockHash(106);
+    msg::Message badBlockHash(107);
 
     badBlockHash.writeInt(fileName.size()); // file
     badBlockHash.writeString(fileName);
