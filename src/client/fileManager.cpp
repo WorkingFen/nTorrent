@@ -173,8 +173,12 @@ std::vector<char> Client::FileManager::getBlockBytes(Client& client, const std::
 
 	off_t offset = index * client.pieceSize;
 	file.seekp(long(offset), std::ios_base::beg);
-    std::vector<char> bytes(client.pieceSize);
-    file.read(&bytes[0], client.pieceSize);
+
+    int diff = getFileSize(fileName) - offset;
+    int thisBlockSize = (diff < client.pieceSize) ? diff : client.pieceSize;
+
+    std::vector<char> bytes(thisBlockSize);
+    file.read(&bytes[0], thisBlockSize);
 
     file.close();
     return bytes;
