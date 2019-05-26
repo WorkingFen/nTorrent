@@ -61,6 +61,8 @@ server::block* server::Server::add_block(server::file& c_file, std::string hash)
 int server::Server::add_block_owner(server::file& c_file, std::string hash, uint no) {
     if(no >= c_file.blocks.size()) return MSG_RNGERROR;
 
+    if(c_file.blocks[no].empty) c_file.blocks[no] = block(hash);
+
     if(c_file.blocks[no].hash == hash) {
         add_owner(c_file.blocks[no], &*cts_it);
         return MSG_OK;
@@ -82,24 +84,24 @@ server::file* server::Server::get_file(std::string name) {
     else return nullptr;
 }
 
+// Get existing block by its number, else nullptr
 server::block* server::Server::get_block(server::file& c_file, uint no) {
     if(no < c_file.blocks.size()) return &(c_file.blocks[no]);
     else return nullptr;
 }
 
-void server::Server::delete_file(std::map<std::string, server::file>::iterator it) {
+// Delete file from vector of files
+void server::Server::delete_file(server::file& c_file) {
+    auto it = files.find(c_file.name);
     files.erase(it);
 }
 
+// Delete block by overwriting it
 bool server::Server::delete_block(server::file& c_file, int no) {
-    for(auto i = c_file.blocks.begin(); i != c_file.blocks.end(); i++)
-        if(i->hash == c_file.blocks[no].hash) {
-            c_file.blocks.erase(i);
-            break;
-        }
-    
-    if(c_file.blocks.empty()) return true;
-    else return false;
+    c_file.blocks[no] = block();
+
+    for(auto c_block : c_file.blocks) if(!c_block.empty) return false;
+    return true;
 }
 
 bool server::Server::delete_owner(server::block& c_block) {
@@ -113,16 +115,13 @@ bool server::Server::delete_owner(server::block& c_block) {
     else return false;
 }
 
-bool server::Server::delete_owner(server::block& c_block, std::string addr) {
-    std::string str_ip = addr.substr(0, 15);
-    in_addr_t ip = stoi(str_ip);
-    std::size_t pos = addr.find(":");
-    std::string str_port = addr.substr(pos+1);
-    in_port_t port = stoi(str_port);
+// Delete owner if it exists and if block isn't empty, then check if block's owners vector isn't empty
+bool server::Server::delete_owner(server::block& c_block, int ip, int port) {
+    if(c_block.empty) return false;
 
-    for(auto i = c_block.owners.begin(); i != c_block.owners.end(); i++)
-        if(*(&(*i)->address.sin_port) == port && *(&(*i)->address.sin_addr.s_addr) == ip) {
-            c_block.owners.erase(i);
+    for(auto c_owner = c_block.owners.begin(); c_owner != c_block.owners.end(); c_owner++)
+        if(*(&(*c_owner)->address.sin_port) == port && *(&(*c_owner)->address.sin_addr.s_addr) == ip) {
+            c_block.owners.erase(c_owner);
             break;
         }
     
@@ -155,19 +154,28 @@ server::Server::Server(const char srv_ip[15], const int& srv_port) : sigint_flag
 
     timeout.tv_sec = 120;
     timeout.tv_usec = 0;
-    
+
     socket_srv();
+    bind_srv(srv_ip, srv_port);
+    listen_srv();   
+}
+
+// Main program loop
+void server::Server::run_srv() {
     int enable = 1;
     if(setsockopt(listener, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(int)) < 0)
         std::cerr << "setting SO_REUSEADDR option on socket " << listener << " failed" << std::endl;
 
-    bind_srv(srv_ip, srv_port);
-    listen_srv();
     while(!sigint_flag){
         select_cts();
         accept_srv();
         check_cts();
     }
+    close_srv();
+}
+
+// Cancel server's thread and close its socket
+void server::Server::close_srv() {
     pthread_cancel(signal_thread.native_handle());
     signal_thread.join();
     shutdown();
@@ -278,7 +286,7 @@ int server::Server::read_srv() {
 #endif        
         return SRV_ERROR;
     }
-    else if(msg.type == 101) {
+    /*else if(msg.type == 101) {
         file* foo = add_file(msg.readInt(), msg.readString(msg.readInt()));  // Weird specification of C++ compiler?
         for(int i = 0; msg.buf_length > 0; i++) {
             block* bar = add_block(*foo, msg.readString(64));
@@ -302,7 +310,7 @@ int server::Server::read_srv() {
             }
         }
 #endif
-    }
+    }*/
     // List all files
     else if(msg.type == 102) {
 #ifdef LOGS
@@ -318,7 +326,7 @@ int server::Server::read_srv() {
             }
         else {}            // Error
     }
-    else if(msg.type == 103) {
+    /*else if(msg.type == 103) {
         auto foo = files.find(msg.readString(msg.readInt()));
         int no_block = msg.readInt();
         if(delete_owner(*get_block(foo->second, no_block)) && delete_block(foo->second, no_block)){
@@ -331,7 +339,7 @@ int server::Server::read_srv() {
 #ifdef LOGS
         std::cout << std::endl << "Message type: " << msg.type << std::endl;
 #endif
-    }
+    }*/
     // File download request
     else if(msg.type == 104) {
 #ifdef LOGS
@@ -371,7 +379,7 @@ int server::Server::read_srv() {
 #endif
         }
     }
-    else if(msg.type == 106) {
+    /*else if(msg.type == 106) {
 #ifdef LOGS
         std::cout << std::endl << "Message type: " << msg.type << std::endl;
 #endif
@@ -392,24 +400,37 @@ int server::Server::read_srv() {
             file_info.writeInt(bar.first->address.sin_port);
             file_info.sendMessage(cts_it->socket);
         }
-    }
+    }*/
+    // Wrong hash from seeder
     else if(msg.type == 107) {
-        auto foo = files.find(msg.readString(msg.readInt()));
-        int no_block = msg.readInt();
-        std::string addr = msg.readString(msg.readInt());
-        std::cout << std::endl << addr << std::endl;
-        if(delete_owner(*get_block(foo->second, no_block), addr) && delete_block(foo->second, no_block)){
-            std::string name = foo->second.name;
-            delete_file(foo);
+        file* e_file = get_file(msg.readString(msg.readInt()));
+        if(e_file == nullptr) {}           // Error
+        else {
+            int no_block = msg.readInt();
+            int o_addr = msg.readInt();
+            int o_port = msg.readInt();
 #ifdef LOGS
-            std::cout << std::endl << "File " << name << " has been deleted" << std::endl;
+            std::cout << std::endl << o_addr << ":" << o_port << std::endl;
 #endif
+            block* e_block = get_block(*e_file, no_block);
+            if(e_block == nullptr) {}       // Error
+            else {
+                if(delete_owner(*e_block, o_addr, o_port) && delete_block(*e_file, no_block)){
+#ifdef LOGS
+                    std::string name = e_file->name;
+#endif
+                    delete_file(*e_file);   
+#ifdef LOGS
+                    std::cout << std::endl << "File " << name << " has been deleted" << std::endl;
+#endif
+                }      
+            }      
         }
 #ifdef LOGS
         std::cout << std::endl << "Message type: " << msg.type << std::endl;
 #endif
     }
-    else if(msg.type == 108) {
+    /*else if(msg.type == 108) {
         auto foo = files.find(msg.readString(msg.readInt()));
         int no_block = msg.readInt();
         if(delete_owner(*get_block(foo->second, no_block)) && delete_block(foo->second, no_block)){
@@ -422,11 +443,13 @@ int server::Server::read_srv() {
 #ifdef LOGS
         std::cout << std::endl << "Message type: " << msg.type << std::endl;
 #endif
-    }
+    }*/
+    // Client keepalive
     else if(msg.type == 110) {
 #ifdef KEEPALIVE
-        std::cout << "KeepAlive: on socket number " << cts_it->socket << std::endl;
+        std::cout << "KeepAlive on socket number: " << cts_it->socket << std::endl;
 #endif
+        cts_it->timeout = std::chrono::high_resolution_clock::now();
         msg::Message reply(209);
         reply.sendMessage(cts_it->socket);
     }

@@ -47,14 +47,16 @@
 #endif
 
 namespace server {
+typedef std::chrono::high_resolution_clock::time_point t_point;
+
     struct client {
         sockaddr_in address;            // Client IP:port
         int socket;                     // Client's socket
         int no_leeches;                 // Number of active leeches
-        int timeout;                    // Time after which connection should end   // ?
+        t_point timeout;                // Time of last connection check
 
         client() {}
-        client(sockaddr_in addr, int s, int t = 0, int nl = 0): 
+        client(sockaddr_in addr, int s, int nl = 0, t_point t = std::chrono::high_resolution_clock::now()): 
             address(addr), socket(s), no_leeches(nl), timeout(t) {}
     };
 
@@ -62,11 +64,12 @@ typedef std::list<client> cts_list;
 typedef std::list<client>::iterator cts_list_it;
 
     struct block {
+        bool empty;
         std::string hash;               // Block hash
         std::vector<client*> owners;    // Vector of clients who do have this block
 
-        block() {}
-        block(std::string h): hash(h) {}
+        block() : empty(true) {}
+        block(std::string h): empty(false), hash(h) {}
     };
     
     struct file {
@@ -118,13 +121,15 @@ typedef std::list<client>::iterator cts_list_it;
             file* get_file(std::string);
             block* get_block(file&, uint);
 
-            void delete_file(std::map<std::string, server::file>::iterator);
+            void delete_file(file&);
             bool delete_block(file&, int);
             bool delete_owner(block&);
-            bool delete_owner(block&, std::string);
+            bool delete_owner(block&, int, int);
 
             std::pair<client*, int> find_least_occupied(file&, std::vector<int>);
 
+            void run_srv();
+            void close_srv();
             void socket_srv();
             void bind_srv(const char srv_ip[15], const int& srv_port);
             void listen_srv();
