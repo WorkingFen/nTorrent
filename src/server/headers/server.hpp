@@ -94,7 +94,9 @@ typedef std::list<client>::iterator cts_list_it;
             fd_set bits_fd;                         // Bits for file descriptors
             int max_fd;                             // Max file descriptor number
 
-            timeval timeout;                        // Timeout for select_ct()          // ?
+            timeval timeout;                        // Timeout for select_ct()
+
+            std::chrono::seconds timesup;           // Time after which client should be disconnected
             
             std::map<std::string, file> files;      // Map of files
             msg::MessageManager msg_manager;
@@ -127,6 +129,9 @@ typedef std::list<client>::iterator cts_list_it;
             bool delete_owner(block&, uint, int);
 
             std::pair<client*, int> find_least_occupied(file&, std::vector<int>);
+
+            bool still_alive();
+            // void info_remove();
 
             void run_srv();
             void close_srv();
