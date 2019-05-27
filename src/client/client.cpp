@@ -158,7 +158,6 @@ void Client::handleServerFileInfo(msg::Message msg)
 
         fileManager->createConfig(*this, fileName, fileSize);
 
-        (void)fileSize;
         std::vector<int> indexes;
         try
         {
@@ -169,7 +168,7 @@ void Client::handleServerFileInfo(msg::Message msg)
             std::cerr << e.what() << '\n';
             return;
         }
-
+        
         sendAskForBlock(mainServerSocket, fileName, indexes); // wysyła zapytanie o blok
 
         console->setMessageState(MessageState::wait_for_block_info); // ustaw stan na oczekiwanie na informację skąd pobrać blok
@@ -188,7 +187,6 @@ void Client::handleServerFileInfo(msg::Message msg)
 
 void Client::handleServerBlockInfo(msg::Message msg)
 {
-    std::cout << "Message state: " << static_cast<int>(console->getMessageState()) <<std::endl;
     //if (console->getMessageState() == MessageState::wait_for_block_info) // jeśli czekaliśmy na to info
     //{
         int fileNameLength = msg.readInt();                    // długość nazwy
@@ -224,7 +222,7 @@ void Client::handleMessagesfromServer()
     if (msg_manager.assembleMsg(mainServerSocket))
     {
         msg::Message msg = msg_manager.readMsg(mainServerSocket);
-        if(msg.type != 209) std::cout << "Received from server: " << msg.type << std::endl;
+        if(msg.type != 209) std::cout << "Received from server: " << msg.type << std::endl << std::endl;
 
         if (msg.type == 211) // tu msg
         {
@@ -273,7 +271,7 @@ void Client::handleMessagesfromSeeders()
             if(msg_manager.assembleMsg(it->sockFd))
             {
                 msg::Message msg = msg_manager.readMsg(it->sockFd);
-                std::cout << "Received from seeder: " << msg.type << std::endl;
+                std::cout << "Received from seeder: " << msg.type << std::endl << std::endl;
 
                 if(msg.type == 111)                                // tu msg
                 {
@@ -344,7 +342,7 @@ void Client::handleMessagesfromLeechers()
             {
                 msg::Message msg = msg_manager.readMsg(it->sockFd);
 
-                std::cout << "Received from leecher: " << msg.type << std::endl;
+                std::cout << "Received from leecher: " << msg.type << std::endl << std::endl;
 
                 if(msg.type == 111)                                // tu msg
                 {

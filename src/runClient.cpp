@@ -14,6 +14,7 @@ int main(int argc, char* argv[])
 
     try{
         Client client((argc < 2) ? "127.0.0.1" : argv[1], 4400, "127.4.0.1", 2200);
+
         client.run();
 
     }

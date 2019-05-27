@@ -110,7 +110,7 @@ void Client::FileManager::putPiece(Client& client, const std::string& fileName, 
 	filePieces.close();
 
 	std::ofstream configFile;
-    configFile.open(path + ".conf");
+    configFile.open(path + ".conf", std::ios::app);
 
     if(!configFile.is_open())
         throw FileManagerException ("File: " + path + ".conf could not be opened.");

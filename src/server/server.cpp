@@ -453,7 +453,6 @@ int server::Server::read_srv() {
             while(msg.buf_length > 0)
                 blocks_no.push_back(msg.readInt());
 
-            //blocks_no.push_back(0);//TBD
             auto lo_ct = find_least_occupied(*c_file, blocks_no);
             if(lo_ct.first == nullptr) {}         // Error: There are no blocks that could be downloaded
             else {
