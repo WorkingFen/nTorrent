@@ -227,7 +227,8 @@ void Client::handleMessagesfromServer()
         if (msg.type == 211) // tu msg
         {
             std::cout << "Server disconnected!" << std::endl;
-            run_stop_flag = true;
+            disconnect();
+            console->setState(State::up);
         }
         else if (msg.type == 210)
         {
