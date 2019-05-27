@@ -158,7 +158,7 @@ void Client::handleServerFileInfo(msg::Message msg)
 
         fileManager->createConfig(*this, fileName, fileSize);
 
-        std::vector<int> indexes;
+        std::vector<int> indexes;//to się wydaje niepotrzebne, skoro config jest pusty
         try
         {
             indexes = fileManager->getIndexesFromConfig(fileName);
@@ -167,9 +167,10 @@ void Client::handleServerFileInfo(msg::Message msg)
         {
             std::cerr << e.what() << '\n';
             return;
-        }
+        }//do tego momentu wydaje się niepotrzebne
         
         sendAskForBlock(mainServerSocket, fileName, indexes); // wysyła zapytanie o blok
+        std::cout << 123 << std::endl;
 
         console->setMessageState(MessageState::wait_for_block_info); // ustaw stan na oczekiwanie na informację skąd pobrać blok
     }
@@ -195,17 +196,16 @@ void Client::handleServerBlockInfo(msg::Message msg)
         std::string hash = msg.readString(64);                 // nazwa pliku
         int address = msg.readInt();                           // adres
         int port = msg.readInt();                              // port
-
+/*
         std::vector<int> indexes = fileManager->getIndexesFromConfig(fileName);
 
-        sendAskForBlock(mainServerSocket, fileName, indexes); // wysyła zapytanie o blok
+        sendAskForBlock(mainServerSocket, fileName, indexes); */
         console->setMessageState(MessageState::none);
 
         (void)blockIndex;
         (void)port;
         (void)address;
 
-        // tutaj wywołanie komunikacji z klientem
         leechFile(134744191,4400,fileName,blockIndex,hash);
     //}
     //else
@@ -224,7 +224,7 @@ void Client::handleMessagesfromServer()
         msg::Message msg = msg_manager.readMsg(mainServerSocket);
         if(msg.type != 209) std::cout << "Received from server: " << msg.type << std::endl << std::endl;
 
-        if (msg.type == 211) // tu msg
+        if (msg.type == 211)
         {
             std::cout << "Server disconnected!" << std::endl;
             disconnect();
@@ -301,8 +301,14 @@ void Client::handleMessagesfromSeeders()
                     
                     msg::Message(111).sendMessage(it->sockFd);
                     close(it->sockFd);
+                    std::string fileName = it->filename;
                     it = seederSockets.erase(it);
                     seederSocketsNum--;
+
+                    if(fileManager->isFileComplete(fileName)) 
+                        fileManager->removeConfig(fileName);
+                    else
+                        sendAskForBlock(mainServerSocket, fileName, fileManager->getIndexesFromConfig(fileName)); // wysyła zapytanie o kolejny blok
                 }
                 else if(msg.type == 402)
                 {
@@ -661,9 +667,9 @@ void Client::run()
             std::cout << "leecherSocketsNum = " << leecherSocketsNum << std::endl;
         }
 
-        handleMessagesfromServer();
+        
         handleMessagesfromSeeders();
-        handleMessagesfromLeechers();
+        handleMessagesfromLeechers();handleMessagesfromServer();
         getUserCommands();
         handleCommands();
 
