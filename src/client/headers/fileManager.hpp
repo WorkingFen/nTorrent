@@ -34,6 +34,8 @@ class Client::FileManager
     bool doesBlockExist(Client& client, const std::string& fileName, const int& index);
     std::vector<int> getIndexesFromConfig(const std::string& fileName);
     void copyFile(const std::string& absoluteFilePath, const std::string& newFileName);
+    bool isFileComplete(const std::string& fileName);
+    void removeConfig(const std::string& fileName);
 };
 
 class FileManagerException : public std::exception

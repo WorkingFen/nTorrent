@@ -237,6 +237,27 @@ void Client::FileManager::copyFile(const std::string& absoluteFilePath, const st
     newFile << oldFile.rdbuf();
 }
 
+bool Client::FileManager::isFileComplete(const std::string& fileName)
+{
+    std::string path = std::string(fileDirName) + "/" + fileName + ".conf";
+    std::fstream file;
+    file.open(path);
+
+    if(!file.is_open())
+        throw FileManagerException ("File: " + path + " could not be opened.");
+
+    int defaultBlocksNumber;
+    file.seekg(0);
+    file >> defaultBlocksNumber;
+    return std::count(std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>(), '\n') - 1 == defaultBlocksNumber;   
+}
+
+void Client::FileManager::removeConfig(const std::string& fileName)
+{
+    std::string path = std::string(fileDirName) + "/" + fileName + ".conf";
+    remove((path).c_str());
+}
+
 FileManagerException::FileManagerException(const std::string& msg) : info("FileManager Exception: " + msg) {}
 
 const char* FileManagerException::what() const throw()

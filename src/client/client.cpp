@@ -607,6 +607,7 @@ void Client::disconnect()
         std::cout << "losed " << it->sockFd << " server socket" << std::endl;
     }
     maxFd = sockFd + 1;
+    fileManager->removeFragmentedFiles();
 }
 
 void Client::turnOff()
@@ -614,7 +615,6 @@ void Client::turnOff()
     pthread_kill(signal_thread.native_handle(), SIGINT); // ubicie ewentualnego sigwaita
     signal_thread.join();
     disconnect();
-    fileManager->removeFragmentedFiles();
 }
 
 void Client::setFileDescrMask()
