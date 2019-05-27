@@ -24,6 +24,14 @@ string hashOnePiece(istream & stream, int pieceLength) {
 	return hash;
 }
 
+string hashOnePiece(vector<char> &bytes) {
+	string bytes_string(bytes.begin(), bytes.end());
+
+	string hash = sha256(bytes_string);
+
+	return hash;
+}
+
 vector<string> hashPieces(string fileName, int pieceLength) {
 
     /*

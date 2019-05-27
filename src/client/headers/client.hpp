@@ -94,7 +94,7 @@ class Client
         void sendAskForBlock(int socket, std::string fileName, std::vector<int> blockList);
         void sendBadBlockHash(int socket, std::string fileName, int blockIndex, std::string seederAdress);
         void listServerFiles();
-        void leechFile(const int ipAddr, int port, std::string filename, int blockIndex);
+        void leechFile(const int ipAddr, int port, std::string filename, int blockIndex, std::string hash);
         void seedFile(int socket, std::string filename, int blockIndex);
 
         void sendBadBlockHash(int socket, std::string fileName, int blockIndex, int seederAddress, int seederPort);

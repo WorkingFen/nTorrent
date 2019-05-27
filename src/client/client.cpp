@@ -50,7 +50,6 @@ Client::Client(const char ipAddr[15], const int& port, const char serverIpAddr[1
         this->port = port;
     }
     std::cout << "Successfully connected and listening at: " << ipAddr << ":" << this->port << std::endl;
-    std::cout << "PLus: " << self.sin_addr.s_addr << std::endl;
     fileManager->removeFragmentedFiles();
 }
 
@@ -143,44 +142,6 @@ void Client::handleCommands()
     }
 }
 
-void Client::handleMessagesfromServer()
-{
-    if (mainServerSocket == -1 || !FD_ISSET(mainServerSocket, &ready))
-        return;
-
-    if (msg_manager.assembleMsg(mainServerSocket))
-    {
-        msg::Message msg = msg_manager.readMsg(mainServerSocket);
-        //std::cout << "Received from server: " << msg.type << std::endl;
-
-        if (msg.type == 211) // tu msg
-        {
-            std::cout << "Server disconnected!" << std::endl;
-            run_stop_flag = true;
-        }
-        else if (msg.type == 210)
-        {
-            pieceSize = msg.readInt();
-            std::cout << "Piece size set to " << pieceSize << std::endl;
-
-            shareFiles();
-        }
-        else if (msg.type == 201) // serwer wysłał info o pliku do pobrania
-        {
-            handleServerFileInfo(msg);
-        }
-        else if (msg.type == 202) // serwer wysłał info o bloku do pobrania
-        {
-            handleServerBlockInfo(msg);
-        }
-    }
-    else if (msg_manager.lastReadResult() == 0 || msg_manager.lastReadResult() == -1) //server left
-    {
-        std::cout << "Lost connection with server!" << std::endl;
-        run_stop_flag = true;
-    }
-}
-
 void Client::handleServerFileInfo(msg::Message msg)
 {
     if (console->getMessageState() == MessageState::wait_for_file_info) // jeśli czekaliśmy na to info
@@ -227,8 +188,9 @@ void Client::handleServerFileInfo(msg::Message msg)
 
 void Client::handleServerBlockInfo(msg::Message msg)
 {
-    if (console->getMessageState() == MessageState::wait_for_block_info) // jeśli czekaliśmy na to info
-    {
+    std::cout << "Message state: " << static_cast<int>(console->getMessageState()) <<std::endl;
+    //if (console->getMessageState() == MessageState::wait_for_block_info) // jeśli czekaliśmy na to info
+    //{
         int fileNameLength = msg.readInt();                    // długość nazwy
         std::string fileName = msg.readString(fileNameLength); // nazwa pliku
         int blockIndex = msg.readInt();                        // numer bloku
@@ -237,6 +199,7 @@ void Client::handleServerBlockInfo(msg::Message msg)
         int port = msg.readInt();                              // port
 
         std::vector<int> indexes = fileManager->getIndexesFromConfig(fileName);
+
         sendAskForBlock(mainServerSocket, fileName, indexes); // wysyła zapytanie o blok
         console->setMessageState(MessageState::none);
 
@@ -244,14 +207,50 @@ void Client::handleServerBlockInfo(msg::Message msg)
         (void)port;
         (void)address;
 
-        std::cout << "address: " << address << std::endl;
-        std::cout << "port: " << htons(port) << std::endl;
         // tutaj wywołanie komunikacji z klientem
-        leechFile(134744191,4400,fileName,blockIndex);
-    }
-    else
-    {
+        leechFile(134744191,4400,fileName,blockIndex,hash);
+    //}
+    //else
+    //{
         /* serwer wysłał wiadomość nieodpowiednią dla stanu */
+    //}
+}
+
+void Client::handleMessagesfromServer()
+{
+    if (mainServerSocket == -1 || !FD_ISSET(mainServerSocket, &ready))
+        return;
+
+    if (msg_manager.assembleMsg(mainServerSocket))
+    {
+        msg::Message msg = msg_manager.readMsg(mainServerSocket);
+        if(msg.type != 209) std::cout << "Received from server: " << msg.type << std::endl;
+
+        if (msg.type == 211) // tu msg
+        {
+            std::cout << "Server disconnected!" << std::endl;
+            run_stop_flag = true;
+        }
+        else if (msg.type == 210)
+        {
+            pieceSize = msg.readInt();
+            std::cout << "Piece size set to " << pieceSize << std::endl;
+
+            shareFiles();
+        }
+        else if (msg.type == 201) // serwer wysłał info o pliku do pobrania
+        {
+            handleServerFileInfo(msg);
+        }
+        else if (msg.type == 202) // serwer wysłał info o bloku do pobrania
+        {
+            handleServerBlockInfo(msg);
+        }
+    }
+    else if (msg_manager.lastReadResult() == 0 || msg_manager.lastReadResult() == -1) //server left
+    {
+        std::cout << "Lost connection with server!" << std::endl;
+        run_stop_flag = true;
     }
 }
 
@@ -269,16 +268,13 @@ void Client::handleMessagesfromSeeders()
         }
         if(FD_ISSET(it->sockFd, &ready))
         {
-            std::cout << "last_active: " << it->last_activity << " ==> ";
             it->last_activity = std::time(0);
-            std::cout << it->last_activity << std::endl;
 
             if(msg_manager.assembleMsg(it->sockFd))
             {
                 msg::Message msg = msg_manager.readMsg(it->sockFd);
                 std::cout << "Received from seeder: " << msg.type << std::endl;
 
-                std::cout << msg.type << std::endl;
                 if(msg.type == 111)                                // tu msg
                 {
                     close(it->sockFd);
@@ -291,10 +287,20 @@ void Client::handleMessagesfromSeeders()
                 {
                     std::cout << "Fname: " << it->filename << "\nIndex: " << it->blockIndex << "\nBuffer length: " << msg.buffer.size() << " (" << msg.buf_length << ")" << std::endl;
 
-                    fileManager->putPiece(*this, it->filename, it->blockIndex, std::string(msg.buffer.begin(), msg.buffer.end()));
-
+                    //sprawdz hashe
+                    std::string hash = hashOnePiece(msg.buffer);
+                    if(hash != it->hash)
+                    {
+                        std::cout << "bad hash:\n" << hash << std::endl << it->hash << std::endl;
+                        //sendBadBlockHash(mainServerSocket, it->filename, it->last_activity);
+                    }
+                    else
+                    {
+                        fileManager->putPiece(*this, it->filename, it->blockIndex, std::string(msg.buffer.begin(), msg.buffer.end()));
+                        sendHaveBlock(mainServerSocket, it->filename, it->blockIndex, hash);
+                    }
+                    
                     msg::Message(111).sendMessage(it->sockFd);
-
                     close(it->sockFd);
                     it = seederSockets.erase(it);
                     seederSocketsNum--;
@@ -332,16 +338,14 @@ void Client::handleMessagesfromLeechers()
 
         if(FD_ISSET(it->sockFd, &ready))
         {
-            std::cout << "last_active: " << it->last_activity << " ==> ";
             it->last_activity = std::time(0);
-            std::cout << it->last_activity << std::endl;
+
             if(msg_manager.assembleMsg(it->sockFd))
             {
                 msg::Message msg = msg_manager.readMsg(it->sockFd);
 
                 std::cout << "Received from leecher: " << msg.type << std::endl;
 
-                std::cout << msg.type << std::endl;
                 if(msg.type == 111)                                // tu msg
                 {
                     close(it->sockFd);
@@ -518,7 +522,7 @@ void Client::listServerFiles()
     msg::Message(102).sendMessage(mainServerSocket);
 }
 
-void Client::leechFile(const int ipAddr, int port, std::string filename, int blockIndex)
+void Client::leechFile(const int ipAddr, int port, std::string filename, int blockIndex, std::string hash)
 {
     struct sockaddr_in x;
     prepareSockaddrStruct(x, ipAddr, port);   
@@ -527,6 +531,7 @@ void Client::leechFile(const int ipAddr, int port, std::string filename, int blo
 
     seederSockets.back().filename = filename;
     seederSockets.back().blockIndex = blockIndex;
+    seederSockets.back().hash = hash;
 
     msg::Message leechMsg(301);
 
