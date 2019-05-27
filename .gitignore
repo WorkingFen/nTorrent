@@ -37,3 +37,5 @@ runClient
 .vscode/
 
 src/bin/
+src/output/
+src/seeds/

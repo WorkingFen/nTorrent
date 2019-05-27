@@ -29,9 +29,9 @@ void Client::ConsoleInterface::handleInputUp(Client &client, std::vector<std::st
     }
     else if (firstArg == "ls")
     {
-        client.fileManager->printFolderContent();
+        client.fileManager->printOutputFolderContent();
     }
-    else if (firstArg == "disconnect" || firstArg == "file_list" || firstArg == "file_download")
+    else if (firstArg == "disconnect" || firstArg == "file_list" || firstArg == "file_download" || firstArg == "seed_status")
     {
         cout << "Nie jestes polaczony z serwerem." << endl;
     }
@@ -69,11 +69,11 @@ void Client::ConsoleInterface::handleInputConnected(Client &client, std::vector<
         client.disconnect();
         state = State::up;
         messageState = MessageState::none;
-        cout << "You are now disconnected!" << endl;
+        cout << "Jestes odlaczony!" << endl;
     }
     else if (firstArg == "ls")
     {
-        client.fileManager->printFolderContent();
+        client.fileManager->printOutputFolderContent();
     }
     else if (firstArg == "file_list")
     {
@@ -92,6 +92,10 @@ void Client::ConsoleInterface::handleInputConnected(Client &client, std::vector<
     {
         fileAdd(client, input);
     }
+    else if (firstArg == "seed_status")
+    {
+        client.fileManager->printSeedsFolderContent();
+    }
     else if (firstArg == "quit")
     {
         state = State::down;
@@ -106,7 +110,7 @@ void Client::ConsoleInterface::printHelp()
 {
     cout << "Lista komend:" << endl
          << "help                        - wypisz liste dostepnych komend" << endl
-         << "ls                          - pokaz zawartosc katalogu z plikami, ktore udostepniasz" << endl;
+         << "ls                          - pokaz zawartosc katalogu \"output\"" << endl;
 
     if (state == State::up)
     {
@@ -117,12 +121,14 @@ void Client::ConsoleInterface::printHelp()
     {
         cout << "disconnect                  - rozlacz sie z serwerem" << endl;
         cout << "file_download <nazwa_pliku> - pobierz plik" << endl;
-        cout << "file_add <pelna_sciezka_pliku> <docelowa_nazwa_pliku>      - zacznij udostępniać plik" << endl;
+        cout << "file_add <pelna_sciezka_pliku> <docelowa_nazwa_pliku>      - zacznij udostepniac plik (jesli chce sie udostepniac plik z katalogu \"output\" to wystarczy napisac \"./<nazwa_pliku>\"" << endl;
         cout << "file_list                   - wylistuj pliki z serwera" << endl;
+        cout << "seed_status                 - pokaz zawartosc katalogu z plikami, ktore pobierasz/udostepniasz" << endl;
     }
     if (state == State::seeding || state == State::both)
     {
         cout << "file_delete <nazwa_pliku>   - przestań udostępniać plik" << endl;
+        cout << "seed_status                 - pokaz zawartosc katalogu z plikami, ktore pobierasz/udostepniasz" << endl;
     }
 
     cout << "quit                        - wylacz program" << endl;

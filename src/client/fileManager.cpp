@@ -9,37 +9,109 @@ Client::FileManager::FileManager()
         throw FileManagerException("Could not find executable's location!");
 
     strcpy(fileDirName, dirname(result));
-    strcat(fileDirName, "/clientFiles");
+    seedsDirName = std::string(fileDirName) + "/seeds";
+    outputDirName = std::string(fileDirName) + "/output";
 }
 
 Client::FileManager::~FileManager() {}
 
 void Client::FileManager::removeFileIfFragmented(const std::string& fileName)
 {
-    const std::string configPath = std::string(fileDirName) + "/configFiles/" + fileName + ".conf";
-    const std::string path = std::string(fileDirName) + "/" + fileName;
+    const std::string configPath = seedsDirName + "/configFiles/" + fileName + ".conf";
+    const std::string path = seedsDirName + "/" + fileName;
 
-    std::ifstream inFile;
-    inFile.open(configPath);
-
-    if(!inFile.is_open())
-        throw FileManagerException ("File: " + configPath + " could not be opened.");
-
-    const int downloadedBlocksNumber = std::count(std::istreambuf_iterator<char>(inFile), std::istreambuf_iterator<char>(), '\n') - 1;
-    int defaultBlocksNumber;
-    inFile.seekg(0);
-    inFile >> defaultBlocksNumber;
-    
-    remove((configPath).c_str());
-    if(downloadedBlocksNumber < defaultBlocksNumber)
+    if(getNumberOfDownloadedBlocks(fileName) < getDefaultNumberOfBlocks(fileName))
     {
         remove(path.c_str());
     }
+    remove((configPath).c_str());
 }
 
-void Client::FileManager::printFolderContent()
+int Client::FileManager::getNumberOfDownloadedBlocks(const std::string& fileName)
 {
-    DIR *fileDir = opendir(fileDirName);
+    const std::string configPath = seedsDirName + "/configFiles/" + fileName + ".conf";
+
+    std::ifstream file;
+    file.open(configPath);
+
+    if(!file.is_open())
+        throw FileManagerException ("File: " + configPath + " could not be opened.");
+
+    return std::count(std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>(), '\n') - 1;
+}
+
+int Client::FileManager::getDefaultNumberOfBlocks(const std::string& fileName)
+{
+    const std::string configPath = seedsDirName + "/configFiles/" + fileName + ".conf";
+
+    std::ifstream file;
+    file.open(configPath);
+
+    if(!file.is_open())
+        throw FileManagerException ("File: " + configPath + " could not be opened.");
+    
+    int defaultBlocksNumber;
+    file.seekg(0);
+    file >> defaultBlocksNumber;
+
+    return defaultBlocksNumber;
+}
+
+bool Client::FileManager::doesFileExist(const std::string& fileName, const bool isConfig)
+{
+    std::string seekedFile = fileName;
+    DIR *fileDir;
+    if(isConfig)
+    {
+        fileDir = opendir((seedsDirName + "/configFiles").c_str());
+        seekedFile += ".conf";
+    }
+    else
+       fileDir = opendir((seedsDirName).c_str());
+    
+    if(fileDir == NULL)
+        throw FileManagerException ("opendir call failed");
+
+    struct dirent *x;
+    while( (x=readdir(fileDir)) != NULL )
+    {
+        const std::string name = x->d_name;
+        if(name == fileName)
+        {
+            closedir(fileDir);
+            return true;
+        }
+    }
+    closedir(fileDir);
+    return false;
+}
+
+void Client::FileManager::printOutputFolderContent()
+{
+    DIR *fileDir = opendir(outputDirName.c_str());
+    
+    if(fileDir == NULL)
+        throw FileManagerException ("opendir call failed");
+
+    struct dirent *x;
+    int i=1;
+    std::cout << std::endl << "ZAWARTOSC KATALOGU OUTPUT:" << std::endl; 
+    while( (x=readdir(fileDir)) != NULL )
+    {
+        const std::string name = x->d_name;
+        if(name != "." && name != "..")
+        {
+            std::cout << i << ". " << name << std::endl;
+            i++;
+        }
+    }
+    std::cout << std::endl;
+    closedir(fileDir);
+}
+
+void Client::FileManager::printSeedsFolderContent()
+{
+    DIR *fileDir = opendir(seedsDirName.c_str());
     
     if(fileDir == NULL)
         throw FileManagerException ("opendir call failed");
@@ -52,7 +124,11 @@ void Client::FileManager::printFolderContent()
         const std::string name = x->d_name;
         if(name != "." && name != ".." && name != "configFiles")
         {
-            std::cout << i << ". " << name << std::endl;
+            if(doesFileExist(name, true))
+                std::cout << i << ". " << name << " (" << getNumberOfDownloadedBlocks(name) << "/" << getDefaultNumberOfBlocks(name) << ")" << std::endl;
+            else
+                std::cout << i << ". " << name << " (fully downloaded)" << std::endl;
+            
             i++;
         }
     }
@@ -60,14 +136,9 @@ void Client::FileManager::printFolderContent()
     closedir(fileDir);
 }
 
-void Client::FileManager::setDir()
-{
-
-}
-
 std::vector<std::string> Client::FileManager::getDirFiles()
 {
-    DIR *fileDir = opendir(fileDirName);
+    DIR *fileDir = opendir(seedsDirName.c_str());
     if(fileDir == NULL)
         throw FileManagerException ("opendir call failed");  
 
@@ -88,7 +159,7 @@ std::vector<std::string> Client::FileManager::getDirFiles()
 off_t Client::FileManager::getFileSize(const std::string& filename)
 {
     struct stat fileStats;
-    const std::string filePath = std::string(fileDirName) + "/" + filename;
+    const std::string filePath = seedsDirName + "/" + filename;
 
     if(stat(filePath.c_str(), &fileStats) == -1)
         throw FileManagerException("Error while retrieving info about file!");
@@ -98,7 +169,7 @@ off_t Client::FileManager::getFileSize(const std::string& filename)
 
 void Client::FileManager::putPiece(Client& client, const std::string& fileName, const int& index, const std::string& pieceData) 
 {
-    const std::string path = std::string(fileDirName) + "/" + fileName;
+    const std::string path = seedsDirName + "/" + fileName;
 
 	std::fstream filePieces;
     filePieces.open(path);
@@ -113,7 +184,7 @@ void Client::FileManager::putPiece(Client& client, const std::string& fileName, 
 
 	filePieces.close();
 
-    const std::string configPath = std::string(fileDirName) + "/configFiles/" + fileName + ".conf";
+    const std::string configPath = seedsDirName + "/configFiles/" + fileName + ".conf";
 
 	std::ofstream configFile;
     configFile.open(configPath, std::ios::app);
@@ -129,16 +200,14 @@ void Client::FileManager::putPiece(Client& client, const std::string& fileName, 
 
 void Client::FileManager::createConfig(Client& client, const std::string& fileName, const off_t& fileSize)
 {
-    const std::string path(fileDirName);
-
-    std::ofstream newFile(path + "/" + fileName, std::ios::ate);             // tworzy nowy plik
+    std::ofstream newFile(seedsDirName + "/" + fileName, std::ios::ate);             // tworzy nowy plik
 
     newFile.seekp(fileSize - 1);
     newFile.write("",1);
     newFile.seekp(0);
     newFile.close();
 
-    std::ofstream configFile((path + "/configFiles/" + fileName + ".conf"), std::ios::app);
+    std::ofstream configFile((seedsDirName + "/configFiles/" + fileName + ".conf"), std::ios::app);
     const int numberOfBlocks = fileSize/client.pieceSize;
 
     if(fileSize%client.pieceSize != 0)
@@ -152,7 +221,7 @@ void Client::FileManager::createConfig(Client& client, const std::string& fileNa
 
 void Client::FileManager::removeFragmentedFiles()
 {
-    const std::string configDirName = std::string(fileDirName) + "/configFiles";
+    const std::string configDirName = seedsDirName + "/configFiles";
 
     DIR *fileDir = opendir(configDirName.c_str());
     
@@ -171,7 +240,7 @@ void Client::FileManager::removeFragmentedFiles()
 
 std::vector<char> Client::FileManager::getBlockBytes(Client& client, const std::string& fileName, const int& index)
 {
-    const std::string path = std::string(fileDirName) + "/" + fileName;
+    const std::string path = seedsDirName + "/" + fileName;
     std::fstream file;
     file.open(path);
     
@@ -194,7 +263,7 @@ std::vector<char> Client::FileManager::getBlockBytes(Client& client, const std::
 bool Client::FileManager::doesBlockExist(Client& client, const std::string& fileName, const int& index)
 {
     std::fstream file;
-    file.open(std::string(fileDirName) + "/configFiles/" + fileName + ".conf");
+    file.open(seedsDirName + "/configFiles/" + fileName + ".conf");
 
     if(file.is_open())
     {
@@ -211,7 +280,7 @@ bool Client::FileManager::doesBlockExist(Client& client, const std::string& file
 
 std::vector<int> Client::FileManager::getIndexesFromConfig(const std::string& fileName)
 {
-    const std::string path = std::string(fileDirName) + "/configFiles/" + fileName + ".conf";
+    const std::string path = seedsDirName + "/configFiles/" + fileName + ".conf";
     std::fstream file;
     file.open(path);
 
@@ -228,40 +297,44 @@ std::vector<int> Client::FileManager::getIndexesFromConfig(const std::string& fi
     return indexes;
 }
 
-void Client::FileManager::copyFile(const std::string& absoluteFilePath, const std::string& newFileName)
+void Client::FileManager::copyFile(const std::string& filePath, const std::string& newFileName)
 {
-    std::ifstream oldFile;
-    oldFile.open(absoluteFilePath);
-
-    if(!oldFile.is_open())
+    if(doesFileExist(newFileName, false))
     {
-        std::cerr << absoluteFilePath << " " << " could not be found" << std::endl;
+        std::cerr << newFileName << " already exists in this location!" << std::endl;
         return;
     }
 
-    std::ofstream newFile((std::string(fileDirName) + "/" + newFileName), std::ios::app);
+    std::ifstream oldFile;
+
+    if(filePath.size() >= 2 && filePath.substr(0,2) == "./")
+    {
+        oldFile.open(outputDirName + filePath.substr(1, filePath.size()-1));
+    }
+    else
+    {
+        oldFile.open(filePath);
+    }
+
+    if(!oldFile.is_open())
+    {
+        std::cerr << filePath << " could not be found" << std::endl;
+        return;
+    }
+
+    std::ofstream newFile((seedsDirName + "/" + newFileName), std::ios::app);
 
     newFile << oldFile.rdbuf();
 }
 
 bool Client::FileManager::isFileComplete(const std::string& fileName)
 {
-    const std::string path = std::string(fileDirName) + "/configFiles/" + fileName + ".conf";
-    std::fstream file;
-    file.open(path);
-
-    if(!file.is_open())
-        throw FileManagerException ("File: " + path + " could not be opened.");
-
-    int defaultBlocksNumber;
-    file.seekg(0);
-    file >> defaultBlocksNumber;
-    return std::count(std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>(), '\n') - 1 == defaultBlocksNumber;   
+    return getDefaultNumberOfBlocks(fileName) == getDefaultNumberOfBlocks(fileName);   
 }
 
 void Client::FileManager::removeConfig(const std::string& fileName)
 {
-    const std::string path = std::string(fileDirName) + "/configFiles/" + fileName + ".conf";
+    const std::string path = seedsDirName + "/configFiles/" + fileName + ".conf";
     remove((path).c_str());
 }
 

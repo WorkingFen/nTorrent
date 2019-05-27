@@ -393,7 +393,7 @@ void Client::shareFiles()
     std::vector<std::string> file_names = std::move(fileManager->getDirFiles());
 
     for (std::string fname : file_names)
-        shareFile("clientFiles", fname);
+        shareFile("seeds", fname);
 
     if (file_names.size() > 0)
         console->setState(State::seeding);

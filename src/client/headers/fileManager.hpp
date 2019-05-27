@@ -16,15 +16,20 @@
 class Client::FileManager
 {
     char fileDirName[4096];
+    std::string seedsDirName;
+    std::string outputDirName;
 
     void removeFileIfFragmented(const std::string& fileName);           //  czyści katalog clientFiles
+    int getNumberOfDownloadedBlocks(const std::string& fileName);
+    int getDefaultNumberOfBlocks(const std::string& fileName);
+    bool doesFileExist(const std::string& fileName, const bool isConfig);
 
     public:
     FileManager();
     ~FileManager();
 
-    void printFolderContent();
-    void setDir();
+    void printOutputFolderContent();
+    void printSeedsFolderContent();
     std::vector<std::string> getDirFiles();   
     off_t getFileSize(const std::string& filename); 
     void putPiece(Client& client, const std::string& fileName, const int& index, const std::string& pieceData);           // metoda umieszczająca fragment pliku w pliku docelowym i aktualizująca plik konfiguracyjny
