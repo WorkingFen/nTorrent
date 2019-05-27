@@ -58,6 +58,7 @@ class Client
         
         void setSigmask();
         void prepareSockaddrStruct(struct sockaddr_in& x, const char ipAddr[15], const int& port);
+        void prepareSockaddrStruct(struct sockaddr_in& x, const int ipAddr, const int& port);
 
         void handleMessagesfromServer(); 
         void handleMessagesfromLeechers();
@@ -92,7 +93,8 @@ class Client
         void sendHaveBlock(int socket, std::string fileName, int blockIndex, std::string hash);
         void sendAskForBlock(int socket, std::string fileName, std::vector<int> blockList);
         void sendBadBlockHash(int socket, std::string fileName, int blockIndex, std::string seederAdress);
-        void leechFile(const char ipAddr[15], std::string filename, int blockIndex);
+        void listServerFiles();
+        void leechFile(const int ipAddr, int port, std::string filename, int blockIndex);
         void seedFile(int socket, std::string filename, int blockIndex);
 
         void sendBadBlockHash(int socket, std::string fileName, int blockIndex, int seederAddress, int seederPort);

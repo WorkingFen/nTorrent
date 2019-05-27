@@ -74,6 +74,11 @@ void Client::ConsoleInterface::handleInputConnected(Client &client, std::vector<
     {
         client.fileManager->printFolderContent();
     }
+    else if (firstArg == "file_list")
+    {
+        //TODODO
+        client.listServerFiles();
+    }
     else if (firstArg == "file_download")
     {
         fileDownload(client, input);
@@ -112,6 +117,7 @@ void Client::ConsoleInterface::printHelp()
         cout << "disconnect                  - rozlacz sie z serwerem" << endl;
         cout << "file_download <nazwa_pliku> - pobierz plik" << endl;
         cout << "file_add <pelna_sciezka_pliku> <docelowa_nazwa_pliku>      - zacznij udostępniać plik" << endl;
+        cout << "file_list                   - wylistuj pliki z serwera" << endl;
     }
     if (state == State::seeding || state == State::both)
     {

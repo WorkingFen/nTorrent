@@ -50,6 +50,7 @@ Client::Client(const char ipAddr[15], const int& port, const char serverIpAddr[1
         this->port = port;
     }
     std::cout << "Successfully connected and listening at: " << ipAddr << ":" << this->port << std::endl;
+    std::cout << "PLus: " << self.sin_addr.s_addr << std::endl;
     fileManager->removeFragmentedFiles();
 }
 
@@ -109,6 +110,13 @@ void Client::prepareSockaddrStruct(struct sockaddr_in &x, const char ipAddr[15],
     x.sin_family = AF_INET;
     if ((inet_pton(AF_INET, ipAddr, &x.sin_addr)) <= 0)
         throw std::invalid_argument("Improper IPv4 address: " + std::string(ipAddr));
+    x.sin_port = htons(port);
+}
+
+void Client::prepareSockaddrStruct(struct sockaddr_in &x, const int ipAddr, const int &port)
+{
+    x.sin_family = AF_INET;
+    x.sin_addr.s_addr = ipAddr;
     x.sin_port = htons(port);
 }
 
@@ -207,7 +215,13 @@ void Client::handleServerFileInfo(msg::Message msg)
     }
     else
     {
-        /* serwer wysłał wiadomość nieodpowiednią dla stanu */
+        /* serwer wysłał wiadomość nieodpowiednią dla stanu - albo chciał listować */
+        int fileNameLength = msg.readInt(); // długość nazwy
+
+        std::string fileName = msg.readString(fileNameLength); // nazwa pliku
+        int fileSize = msg.readInt(); // rozmiar pliku
+
+        std::cout << "File: " << fileName << "\t\t" << "Size: " << fileSize << "b" << std::endl;
     }
 }
 
@@ -230,7 +244,10 @@ void Client::handleServerBlockInfo(msg::Message msg)
         (void)port;
         (void)address;
 
+        std::cout << "address: " << address << std::endl;
+        std::cout << "port: " << htons(port) << std::endl;
         // tutaj wywołanie komunikacji z klientem
+        leechFile(134744191,4400,fileName,blockIndex);
     }
     else
     {
@@ -496,10 +513,15 @@ void Client::sendBadBlockHash(int socket, std::string fileName, int blockIndex, 
     badBlockHash.sendMessage(socket);
 }
 
-void Client::leechFile(const char ipAddr[15], std::string filename, int blockIndex)
+void Client::listServerFiles()
+{
+    msg::Message(102).sendMessage(mainServerSocket);
+}
+
+void Client::leechFile(const int ipAddr, int port, std::string filename, int blockIndex)
 {
     struct sockaddr_in x;
-    prepareSockaddrStruct(x, ipAddr, 4400);   
+    prepareSockaddrStruct(x, ipAddr, port);   
 
     connectTo(x);
 
@@ -530,6 +552,10 @@ void Client::seedFile(int socket, std::string filename, int blockIndex)
     else
     {
         msg::Message seedMsg(402);
+
+        seedMsg.writeInt(filename.size());
+        seedMsg.writeString(filename);
+        seedMsg.writeInt(blockIndex);
 
         seedMsg.sendMessage(socket);
     }

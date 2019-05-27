@@ -75,7 +75,7 @@ void Message::writeString(std::string s)
 }
 
 int Message::sendMessage(int dst_socket)
-{std::cout << "Message sent" << std::endl; 
+{//std::cout << "Message sent" << std::endl; 
 
     if(write(dst_socket, &buf_length, sizeof(buf_length)) < 0)
     {
