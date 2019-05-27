@@ -1,10 +1,14 @@
 #include "headers/fileManager.hpp"
-
+#include <libgen.h>
 #include <iostream>
 
 Client::FileManager::FileManager()
 {
-    getcwd(fileDirName, 1000);
+    char result[4096];
+    if(readlink("/proc/self/exe", result, PATH_MAX) == -1)
+        throw FileManagerException("Could not find executable's location!");
+
+    strcpy(fileDirName, dirname(result));
     strcat(fileDirName, "/clientFiles");
 }
 
