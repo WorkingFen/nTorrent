@@ -17,7 +17,7 @@ class Client::FileManager
 {
     char fileDirName[1000];
 
-    void removeFileIfFragmented(const std::string& fileName);
+    void removeFileIfFragmented(const std::string& fileName);           //  czyści katalog clientFiles
 
     public:
     FileManager();

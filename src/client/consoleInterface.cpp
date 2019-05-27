@@ -31,7 +31,7 @@ void Client::ConsoleInterface::handleInputUp(Client &client, std::vector<std::st
     {
         client.fileManager->printFolderContent();
     }
-    else if (firstArg == "disconnect")
+    else if (firstArg == "disconnect" || firstArg == "file_list" || firstArg == "file_download")
     {
         cout << "Nie jestes polaczony z serwerem." << endl;
     }
@@ -69,6 +69,7 @@ void Client::ConsoleInterface::handleInputConnected(Client &client, std::vector<
         client.disconnect();
         state = State::up;
         messageState = MessageState::none;
+        cout << "You are now disconnected!" << endl;
     }
     else if (firstArg == "ls")
     {
