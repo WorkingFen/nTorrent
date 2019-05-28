@@ -75,6 +75,8 @@ void Client::connectTo(const struct sockaddr_in &address)
     }
 
     maxFd = std::max(maxFd, sock + 1);
+
+    sendListeningAddress();
 }
 
 const struct sockaddr_in &Client::getServer() const
@@ -169,7 +171,7 @@ void Client::handleServerFileInfo(msg::Message msg)
         }//do tego momentu wydaje się niepotrzebne
         
         sendAskForBlock(mainServerSocket, fileName, indexes); // wysyła zapytanie o blok
-        std::cout << 123 << std::endl;
+        //std::cout << 123 << std::endl;
 
         console->setMessageState(MessageState::wait_for_block_info); // ustaw stan na oczekiwanie na informację skąd pobrać blok
     }
@@ -375,6 +377,17 @@ void Client::handleMessagesfromLeechers()
         ++it;
     }
 }
+
+void Client::sendListeningAddress()
+{
+    msg::Message msg(112);
+
+    msg.writeInt(self.sin_addr.s_addr);
+    msg.writeInt(self.sin_port);
+
+    msg.sendMessage(mainServerSocket);
+}
+
 
 void Client::shareFile(std::string directory, std::string fname)
 {

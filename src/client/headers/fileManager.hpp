@@ -42,6 +42,8 @@ class Client::FileManager
     bool isFileComplete(const std::string& fileName);
     void removeConfig(const std::string& fileName);
     void moveSeedToOutput(const std::string& fileName);
+
+    std::string getSeedsDirName();
 };
 
 class FileManagerException : public std::exception
