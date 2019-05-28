@@ -398,7 +398,7 @@ int server::Server::read_srv() {
             }
         else {}            // Error: There are no files
     }
-
+    // Delete client's file
     else if(msg.type == 103) {
         file* e_file = get_file(msg.readString(msg.readInt()));
         if(e_file == nullptr) {}        // Error: There is no file with this name
@@ -482,6 +482,7 @@ int server::Server::read_srv() {
                 else {
                     blocks_no.push_back(lo_ct.second);
                     lo_ct.first->no_leeches++;
+                    lo_vector.push_back(lo_ct);
                 }
             }
             if(!lo_vector.empty()) {
