@@ -479,8 +479,8 @@ int server::Server::read_srv() {
                 file_info.writeString(c_file->name);
                 file_info.writeInt(lo_ct.second);
                 file_info.writeString(c_file->blocks[lo_ct.second].hash);
-                file_info.writeInt(lo_ct.first->address.sin_addr.s_addr);
-                file_info.writeInt(lo_ct.first->address.sin_port);
+                file_info.writeInt(lo_ct.first->call_addr.sin_addr.s_addr);
+                file_info.writeInt(lo_ct.first->call_addr.sin_port);
                 file_info.sendMessage(cts_it->socket);
             }
         }
@@ -543,6 +543,13 @@ int server::Server::read_srv() {
         std::cout << "The client disconnected" << std::endl;
 #endif
         return SRV_NOCONN;
+    }
+    else if(msg.type == 112) {
+#ifdef LOGS
+        std::cout << std::endl << "Message type: " << msg.type << std::endl;
+#endif
+    cts_it->call_addr.sin_addr.s_addr = msg.readInt();
+    cts_it->call_addr.sin_port = msg.readInt();
     }
     else {
 #ifdef LOGS
