@@ -195,6 +195,19 @@ bool server::Server::still_alive() {
     else return true;
 }
 
+// Set owned file to client
+void server::Server::be_owned(server::file& c_file, int no_block) {
+    auto e_file = cts_it->o_files.find(c_file.name);
+
+    for(uint i = 0; i < e_file->second.size(); i++) if(e_file->second[i] == no_block) return;
+    
+    if(e_file == cts_it->o_files.end()) {
+        std::vector<int> no_blocks(no_block);
+        cts_it->o_files.insert({c_file.name, no_blocks});
+    }
+    else e_file->second.push_back(no_block);
+}
+
 server::Server::Server(const char srv_ip[15], const int& srv_port) : timesup(8), sigint_flag(false) {
     set_SIGmask();
     signal_thread = std::thread(&Server::signal_waiter, this);
@@ -340,10 +353,13 @@ int server::Server::read_srv() {
     // Share file
     else if(msg.type == 101) {
         file* c_file = add_file(msg.readInt(), msg.readString(msg.readInt()));  // Weird specification of C++ compiler?
-        for(int no_block = 0; msg.buf_length > 0; no_block++) {
-            block* c_block = add_block(*c_file, msg.readString(64), no_block);
+        for(uint no_block = 0; msg.buf_length > 0; no_block++) {
+            block* c_block = add_block(*c_file, msg.readString(64), no_block); 
             if(c_block == nullptr) {}             // Error: Hashes don't match
-            else add_owner(*c_block, &*cts_it);
+            else {
+                add_owner(*c_block, &*cts_it);
+                be_owned(*c_file, no_block);
+            }
         }
 #ifdef LOGS
         std::cout << std::endl << "Message type: " << msg.type << std::endl;
@@ -433,6 +449,7 @@ int server::Server::read_srv() {
                     break;
                 }
             }
+            be_owned(*c_file, no_block);
 #ifdef LOGS
             std::cout << std::endl << "Message type: " << msg.type << std::endl;
             std::cout << "File name: " << c_file->name << std::endl;
@@ -462,8 +479,8 @@ int server::Server::read_srv() {
                 file_info.writeString(c_file->name);
                 file_info.writeInt(lo_ct.second);
                 file_info.writeString(c_file->blocks[lo_ct.second].hash);
-                file_info.writeInt(lo_ct.first->address.sin_addr.s_addr);
-                file_info.writeInt(lo_ct.first->address.sin_port);
+                file_info.writeInt(lo_ct.first->call_addr.sin_addr.s_addr);
+                file_info.writeInt(lo_ct.first->call_addr.sin_port);
                 file_info.sendMessage(cts_it->socket);
             }
         }
@@ -526,6 +543,13 @@ int server::Server::read_srv() {
         std::cout << "The client disconnected" << std::endl;
 #endif
         return SRV_NOCONN;
+    }
+    else if(msg.type == 112) {
+#ifdef LOGS
+        std::cout << std::endl << "Message type: " << msg.type << std::endl;
+#endif
+    cts_it->call_addr.sin_addr.s_addr = msg.readInt();
+    cts_it->call_addr.sin_port = msg.readInt();
     }
     else {
 #ifdef LOGS
