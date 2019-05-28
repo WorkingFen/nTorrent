@@ -54,6 +54,7 @@ class Client::ConsoleInterface
     void stopLeeching();
 
     State getState();
+    void setState(State state);
     MessageState getMessageState();
     void setMessageState(MessageState state);
 

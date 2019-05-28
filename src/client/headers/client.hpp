@@ -18,16 +18,31 @@ class Client
     private:
         class ConsoleInterface;
         class FileManager;
-        int pieceSize = 10;
+        int pieceSize = 400000;
 
-        int sockFd, port, clientSocketsNum, serverSocketsNum, maxFd;        // listen socket; przydzielony port efemeryczny; liczba socketów pobierających/wysyłających dane (nie licząc komunikacji z serwerem)
+        int sockFd, port, maxFd;        // listen socket; przydzielony port efemeryczny; liczba socketów pobierających/wysyłających dane (nie licząc komunikacji z serwerem)
         struct sockaddr_in self, server;
         fd_set ready;
         struct timeval to;
 
         int mainServerSocket = -1;
-        std::list<int> clientSockets;                             // lista z socketami pełniącymi role leechów/peerów
-        std::list<int> serverSockets;                             // lista z socketami pełniącymi role seederów/peerów    
+        struct FileSocket
+        {
+            int sockFd;
+
+            std::string filename = std::string();
+            int blockIndex = -1;
+
+            std::string hash;
+            std::time_t last_activity = std::time(0);
+
+            FileSocket() {}
+            FileSocket(int i): sockFd(i) {}
+        };
+
+        std::list<FileSocket> seederSockets;                             // lista z socketami pełniącymi role leechów/peerów
+        std::list<FileSocket> leecherSockets;                             // lista z socketami pełniącymi role seederów/peerów  
+        std::time_t timeout = 20;  
 
         std::thread input;
         msg::MessageManager msg_manager;
@@ -43,13 +58,17 @@ class Client
         
         void setSigmask();
         void prepareSockaddrStruct(struct sockaddr_in& x, const char ipAddr[15], const int& port);
+        void prepareSockaddrStruct(struct sockaddr_in& x, const int ipAddr, const int& port);
 
         void handleMessagesfromServer(); 
+        void handleMessagesfromLeechers();
+        void handleMessagesfromSeeders();
 
         void handleServerFileInfo(msg::Message msg);        // handler dla 201
         void handleServerBlockInfo(msg::Message msg);       // handler dla 202
 
-        void handleMessages();
+        void handleSeederFile(FileSocket &s, msg::Message &msg);
+
         void getUserCommands();
         void handleCommands();
 
@@ -65,7 +84,7 @@ class Client
 
         const struct sockaddr_in& getServer() const;
 
-        void shareFile(std::string directory, std::string fname);
+        void shareFile(std::string directory, std::string fname);   //to wszystko raczej prywatne, a nie publiczne
         void shareFiles();
         void sendFileInfo(int socket, std::string directory, std::string filename);
         void sendFilesInfo();
@@ -75,10 +94,12 @@ class Client
         void sendAskForFile(std::string fileName);
         void sendHaveBlock(int socket, std::string fileName, int blockIndex, std::string hash);
         void sendAskForBlock(int socket, std::string fileName, std::vector<int> blockList);
+        void sendBadBlockHash(int socket, std::string fileName, int blockIndex, std::string seederAdress);
+        void listServerFiles();
+        void leechFile(const int ipAddr, int port, std::string filename, int blockIndex, std::string hash);
+        void seedFile(int socket, std::string filename, int blockIndex);
+
         void sendBadBlockHash(int socket, std::string fileName, int blockIndex, int seederAddress, int seederPort);
-
-        
-
 
         void run();                                                   // pętla z selectem
 

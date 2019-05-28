@@ -35,3 +35,7 @@ runClient
 
 # VS Code files
 .vscode/
+
+src/bin/
+src/output/
+src/seeds/

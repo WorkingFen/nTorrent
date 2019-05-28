@@ -469,6 +469,7 @@ int server::Server::read_srv() {
             std::vector<int> blocks_no;
             while(msg.buf_length > 0)
                 blocks_no.push_back(msg.readInt());
+
             auto lo_ct = find_least_occupied(*c_file, blocks_no);
             if(lo_ct.first == nullptr) {}         // Error: There are no blocks that could be downloaded
             else {

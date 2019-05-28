@@ -29,9 +29,9 @@ void Client::ConsoleInterface::handleInputUp(Client &client, std::vector<std::st
     }
     else if (firstArg == "ls")
     {
-        client.fileManager->printFolderContent();
+        client.fileManager->printOutputFolderContent();
     }
-    else if (firstArg == "disconnect")
+    else if (firstArg == "disconnect" || firstArg == "file_list" || firstArg == "file_download" || firstArg == "seed_status")
     {
         cout << "Nie jestes polaczony z serwerem." << endl;
     }
@@ -69,10 +69,16 @@ void Client::ConsoleInterface::handleInputConnected(Client &client, std::vector<
         client.disconnect();
         state = State::up;
         messageState = MessageState::none;
+        cout << "Jestes odlaczony!" << endl;
     }
     else if (firstArg == "ls")
     {
-        client.fileManager->printFolderContent();
+        client.fileManager->printOutputFolderContent();
+    }
+    else if (firstArg == "file_list")
+    {
+        //TODODO
+        client.listServerFiles();
     }
     else if (firstArg == "file_download")
     {
@@ -85,6 +91,10 @@ void Client::ConsoleInterface::handleInputConnected(Client &client, std::vector<
     else if (firstArg == "file_add")
     {
         fileAdd(client, input);
+    }
+    else if (firstArg == "seed_status")
+    {
+        client.fileManager->printSeedsFolderContent();
     }
     else if (firstArg == "quit")
     {
@@ -100,7 +110,7 @@ void Client::ConsoleInterface::printHelp()
 {
     cout << "Lista komend:" << endl
          << "help                        - wypisz liste dostepnych komend" << endl
-         << "ls                          - pokaz zawartosc katalogu z plikami, ktore udostepniasz" << endl;
+         << "ls                          - pokaz zawartosc katalogu \"output\"" << endl;
 
     if (state == State::up)
     {
@@ -111,11 +121,14 @@ void Client::ConsoleInterface::printHelp()
     {
         cout << "disconnect                  - rozlacz sie z serwerem" << endl;
         cout << "file_download <nazwa_pliku> - pobierz plik" << endl;
-        cout << "file_add <nazwa_pliku>      - zacznij udostępniać plik" << endl;
+        cout << "file_add <pelna_sciezka_pliku> <docelowa_nazwa_pliku>      - zacznij udostepniac plik (jesli chce sie udostepniac plik z katalogu \"output\" to wystarczy napisac \"./<nazwa_pliku>\"" << endl;
+        cout << "file_list                   - wylistuj pliki z serwera" << endl;
+        cout << "seed_status                 - pokaz zawartosc katalogu z plikami, ktore pobierasz/udostepniasz" << endl;
     }
     if (state == State::seeding || state == State::both)
     {
         cout << "file_delete <nazwa_pliku>   - przestań udostępniać plik" << endl;
+        cout << "seed_status                 - pokaz zawartosc katalogu z plikami, ktore pobierasz/udostepniasz" << endl;
     }
 
     cout << "quit                        - wylacz program" << endl;
@@ -156,13 +169,14 @@ void Client::ConsoleInterface::fileDelete(Client &client, const std::vector<std:
 
 void Client::ConsoleInterface::fileAdd(Client &client, const std::vector<std::string> &input)
 {
-    if (input.size() < 2)
+    if (input.size() < 3)
     {
         printIncorrectCommand();
     }
     else
     {
-        client.shareFile("clientFiles", input[1]); // wysłanie żądania o plik do serwera
+        client.fileManager->copyFile(input[1], input[2]);
+        client.shareFile("clientFiles", input[2]); // wysłanie żądania o plik do serwera
 
         if(state==State::leeching) state = State::both;
         else if(state==State::connected) state = State::seeding;
@@ -235,6 +249,11 @@ void Client::ConsoleInterface::stopLeeching()
 State Client::ConsoleInterface::getState()
 {
     return state;
+}
+
+void Client::ConsoleInterface::setState(State newState)
+{
+    state = newState;
 }
 
 MessageState Client::ConsoleInterface::getMessageState()

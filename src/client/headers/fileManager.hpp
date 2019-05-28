@@ -15,24 +15,33 @@
 
 class Client::FileManager
 {
-    char fileDirName[1000];
+    char fileDirName[4096];
+    std::string seedsDirName;
+    std::string outputDirName;
 
-    void removeFileIfFragmented(const std::string& fileName);
+    void removeFileIfFragmented(const std::string& fileName);           //  czyści katalog clientFiles
+    int getNumberOfDownloadedBlocks(const std::string& fileName);
+    int getDefaultNumberOfBlocks(const std::string& fileName);
+    bool doesFileExist(const std::string& fileName, const bool isConfig);
 
     public:
     FileManager();
     ~FileManager();
 
-    void printFolderContent();
-    void setDir();
+    void printOutputFolderContent();
+    void printSeedsFolderContent();
     std::vector<std::string> getDirFiles();   
     off_t getFileSize(const std::string& filename); 
     void putPiece(Client& client, const std::string& fileName, const int& index, const std::string& pieceData);           // metoda umieszczająca fragment pliku w pliku docelowym i aktualizująca plik konfiguracyjny
     void createConfig(Client& client, const std::string& fileName, const off_t& fileSize);                 // metoda tworząca plik konfiguracyjny (na jego początku docelowa liczba bloków) oraz plik docelowy, do którego będą umieszczane fragmenty
     void removeFragmentedFiles();
     std::vector<char> getBlockBytes(Client& client, const std::string& fileName, const int& index);
-    bool doesBlockExist(const std::string& fileName, const int& index);
+    bool doesBlockExist(Client& client, const std::string& fileName, const int& index);
     std::vector<int> getIndexesFromConfig(const std::string& fileName);
+    void copyFile(const std::string& absoluteFilePath, const std::string& newFileName);
+    bool isFileComplete(const std::string& fileName);
+    void removeConfig(const std::string& fileName);
+    void moveSeedToOutput(const std::string& fileName);
 };
 
 class FileManagerException : public std::exception

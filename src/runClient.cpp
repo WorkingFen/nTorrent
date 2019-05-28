@@ -13,7 +13,8 @@ int main(int argc, char* argv[])
     // signal(SIGINT, sighand);
 
     try{
-        Client client((argc < 2) ? "127.0.0.1" : argv[1], 0, "127.4.0.1", 2200);
+        Client client((argc < 2) ? "127.0.0.1" : argv[1], 4400, "127.4.0.1", 2200);
+
         client.run();
 
     }
