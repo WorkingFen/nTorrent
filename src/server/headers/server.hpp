@@ -50,10 +50,11 @@ namespace server {
 typedef std::chrono::high_resolution_clock::time_point t_point;
 
     struct client {
-        sockaddr_in address;            // Client IP:port
-        int socket;                     // Client's socket
-        int no_leeches;                 // Number of active leeches
-        t_point timeout;                // Time of last connection check
+        sockaddr_in address;                                // Client IP:port
+        int socket;                                         // Client's socket
+        int no_leeches;                                     // Number of active leeches
+        t_point timeout;                                    // Time of last connection check
+        std::map<std::string, std::vector<int>> o_files;    // Files owned by client
 
         client() {}
         client(sockaddr_in addr, int s, int nl = 0, t_point t = std::chrono::high_resolution_clock::now()): 
@@ -131,6 +132,7 @@ typedef std::list<client>::iterator cts_list_it;
             std::pair<client*, int> find_least_occupied(file&, std::vector<int>);
 
             bool still_alive();
+            void be_owned(file&, int);
             // void info_remove();
 
             void run_srv();
