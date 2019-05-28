@@ -86,6 +86,7 @@ class Client
 
         void shareFile(std::string directory, std::string fname);   //to wszystko raczej prywatne, a nie publiczne
         void shareFiles();
+        void sendListeningAddress();
         void sendFileInfo(int socket, std::string directory, std::string filename);
         void sendFilesInfo();
         void sendDeleteBlock(int socket, std::string fileName, int blockIndex);

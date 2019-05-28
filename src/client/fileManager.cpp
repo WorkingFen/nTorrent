@@ -352,9 +352,15 @@ void Client::FileManager::removeConfig(const std::string& fileName)
     remove((path).c_str());
 }
 
+std::string Client::FileManager::getSeedsDirName()
+{
+    return seedsDirName;
+}
+
 FileManagerException::FileManagerException(const std::string& msg) : info("FileManager Exception: " + msg) {}
 
 const char* FileManagerException::what() const throw()
 {
     return info.c_str();
 }
+

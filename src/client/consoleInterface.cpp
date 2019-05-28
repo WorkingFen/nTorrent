@@ -84,7 +84,11 @@ void Client::ConsoleInterface::handleInputConnected(Client &client, std::vector<
     {
         fileDownload(client, input);
     }
-    else if (firstArg == "file_delete" && (state == State::seeding || state == State::both))
+    else if (firstArg == "stop_seeding" && (state == State::seeding || state == State::both))
+    {
+        fileDelete(client, input);
+    }
+    else if (firstArg == "stop_downloading" && (state == State::both))
     {
         fileDelete(client, input);
     }
@@ -159,11 +163,15 @@ void Client::ConsoleInterface::fileDelete(Client &client, const std::vector<std:
     }
     else
     {
-        client.sendDeleteFile(input[1]); // wysłanie żądania o plik do serwera
-        // + zakończenie komunikacji z klientem?
+        client.sendDeleteFile(input[1]); // wysłanie żądania o usunięcie pliku do serwera
 
-        // + ewentualna zmiana stanu: both->leeching lub seeding->connected, 
-        //   jeśli był to jedyny udostępniany plik 
+        remove((client.fileManager->getSeedsDirName() + "/" + input[1]).c_str());  // usuń plik z folderu seeds
+
+        if(client.fileManager->getDirFiles().size() == 0)        // jeśli w seeds jest pusto, to znaczy że już nic nie udostępniamy ani nie pobieramy  
+        {
+            if(state == State::both) state = State::connected;
+            else if(state == State::seeding) state = State::connected;
+        }
     }
 }
 
