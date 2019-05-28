@@ -21,7 +21,7 @@ void Client::ConsoleInterface::handleInputUp(Client &client, std::vector<std::st
     }
     else if (firstArg == "connect")
     {
-        client.connectTo(client.getServer());
+        client.connectTo(client.getServer(), SERVER);
 
         //wait for 210 before anything else
 
@@ -100,6 +100,15 @@ void Client::ConsoleInterface::handleInputConnected(Client &client, std::vector<
     {
         client.fileManager->printSeedsFolderContent();
     }
+    else if(firstArg == "state")
+    {
+        if(state == State::leeching)std::cout<<"leeching"<<std::endl;
+        else if(state == State::seeding)std::cout<<"seeding"<<std::endl;
+        else if(state == State::both)std::cout<<"both"<<std::endl;
+        else if(state == State::connected)std::cout<<"connected"<<std::endl;
+        else if(state == State::up)std::cout<<"up"<<std::endl;
+        else if(state == State::down)std::cout<<"down"<<std::endl;
+    }
     else if (firstArg == "quit")
     {
         state = State::down;
@@ -112,30 +121,30 @@ void Client::ConsoleInterface::handleInputConnected(Client &client, std::vector<
 
 void Client::ConsoleInterface::printHelp()
 {
-    cout << "Lista komend:" << endl
-         << "help                        - wypisz liste dostepnych komend" << endl
-         << "ls                          - pokaz zawartosc katalogu \"output\"" << endl;
+    cout << "------Lista komend:------" << endl
+         << "[*] help                        - wypisz liste dostepnych komend" << endl
+         << "[*] ls                          - pokaz zawartosc katalogu \"output\"" << endl;
 
     if (state == State::up)
     {
-        cout << "connect                     - polacz z serwerem" << endl;
+        cout << "[*] connect                     - polacz z serwerem" << endl;
     }
     if (state == State::connected || state == State::seeding ||
         state == State::leeching || state == State::both)
     {
-        cout << "disconnect                  - rozlacz sie z serwerem" << endl;
-        cout << "file_download <nazwa_pliku> - pobierz plik" << endl;
-        cout << "file_add <pelna_sciezka_pliku> <docelowa_nazwa_pliku>      - zacznij udostepniac plik (jesli chce sie udostepniac plik z katalogu \"output\" to wystarczy napisac \"./<nazwa_pliku>\"" << endl;
-        cout << "file_list                   - wylistuj pliki z serwera" << endl;
-        cout << "seed_status                 - pokaz zawartosc katalogu z plikami, ktore pobierasz/udostepniasz" << endl;
+        cout << "[*] disconnect                  - rozlacz sie z serwerem" << endl;
+        cout << "[*] file_download <nazwa_pliku> - pobierz plik" << endl;
+        cout << "[*] file_add <pelna_sciezka_pliku> <docelowa_nazwa_pliku>      - zacznij udostepniac plik (jesli chce sie udostepniac plik z katalogu \"output\" to wystarczy napisac \"./<nazwa_pliku>\"" << endl;
+        cout << "[*] file_list                   - wylistuj pliki z serwera" << endl;
+        cout << "[*] seed_status                 - pokaz zawartosc katalogu z plikami, ktore pobierasz/udostepniasz" << endl;
     }
     if (state == State::seeding || state == State::both)
     {
-        cout << "file_delete <nazwa_pliku>   - przestań udostępniać plik" << endl;
-        cout << "seed_status                 - pokaz zawartosc katalogu z plikami, ktore pobierasz/udostepniasz" << endl;
+        cout << "[*] stop_seeding <nazwa_pliku>   - przestań udostępniać plik" << endl;
+        cout << "[*] stop_downloading <nazwa_pliku>   - przestań pobierać i udostępniać plik" << endl;
     }
 
-    cout << "quit                        - wylacz program" << endl;
+    cout << "[*] quit                        - wylacz program" << endl;
 }
 
 void Client::ConsoleInterface::fileDownload(Client &client, const std::vector<std::string> &input)
@@ -184,7 +193,7 @@ void Client::ConsoleInterface::fileAdd(Client &client, const std::vector<std::st
     else
     {
         client.fileManager->copyFile(input[1], input[2]);
-        client.shareFile("clientFiles", input[2]); // wysłanie żądania o plik do serwera
+        client.shareFile(client.fileManager->getSeedsDirName(), input[2]); // wysłanie żądania o plik do serwera
 
         if(state==State::leeching) state = State::both;
         else if(state==State::connected) state = State::seeding;

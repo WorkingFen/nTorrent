@@ -58,7 +58,7 @@ Client::~Client()
     std::cout << "Disconnected" << std::endl;
 }
 
-void Client::connectTo(const struct sockaddr_in &address)
+void Client::connectTo(const struct sockaddr_in &address, int isServer)
 {
     int sock = socket(AF_INET, SOCK_STREAM, 0);
 
@@ -76,7 +76,7 @@ void Client::connectTo(const struct sockaddr_in &address)
 
     maxFd = std::max(maxFd, sock + 1);
 
-    sendListeningAddress();
+    if(isServer) sendListeningAddress();            // jeśli łączymy się do serwera, wysyłany jest 112
 }
 
 const struct sockaddr_in &Client::getServer() const
@@ -203,9 +203,6 @@ void Client::handleServerBlockInfo(msg::Message msg)
         sendAskForBlock(mainServerSocket, fileName, indexes); */
         console->setMessageState(MessageState::none);
 
-        (void)port;
-        (void)address;
-        std::cout<<"<handleBlockInfo> addr="<<address<<" port="<<port<<std::endl;
         leechFile(address,port,fileName,blockIndex,hash);
     //}
     //else
@@ -545,7 +542,8 @@ void Client::leechFile(const int ipAddr, int port, std::string filename, int blo
     struct sockaddr_in x;
     prepareSockaddrStruct(x, ipAddr, port);   
 
-    connectTo(x);
+    std::cout<<"Connecting to ip:"<<ipAddr<<" port:"<<port<<std::endl;
+    connectTo(x, CLIENT);
 
     seederSockets.back().filename = filename;
     seederSockets.back().blockIndex = blockIndex;

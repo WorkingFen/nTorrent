@@ -13,6 +13,9 @@
 #include <memory>
 #include "../../message/message.hpp"
 
+#define SERVER 1
+#define CLIENT 0
+
 class Client
 {
     private:
@@ -80,7 +83,7 @@ class Client
         Client(const char ipAddr[15], const int& port, const char serverIpAddr[15], const int& serverPort=2200);         // tworzy socketa, który będzie nasłuchiwał
         ~Client();
 
-        void connectTo(const struct sockaddr_in &server);             // łączy się z klientem o podanym adresie (serwer powinien przesyłać gotową strukturę do klienta) lub z serwerem torrent
+        void connectTo(const struct sockaddr_in &server, int isServer);             // łączy się z klientem o podanym adresie (serwer powinien przesyłać gotową strukturę do klienta) lub z serwerem torrent
 
         const struct sockaddr_in& getServer() const;
 
