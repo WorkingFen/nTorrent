@@ -13,7 +13,7 @@
 
 using namespace msg;
 
-Client::Client(const char ipAddr[15], const int& port, const char serverIpAddr[15], const int& serverPort) : seederSocketsNum(0), leecherSocketsNum(0), maxFd(0), console(std::unique_ptr<ConsoleInterface>(new ConsoleInterface)), fileManager(std::unique_ptr<FileManager>(new FileManager))
+Client::Client(const char ipAddr[15], const int& port, const char serverIpAddr[15], const int& serverPort) : maxFd(0), console(std::unique_ptr<ConsoleInterface>(new ConsoleInterface)), fileManager(std::unique_ptr<FileManager>(new FileManager))
 {
     prepareSockaddrStruct(self, ipAddr, port);
     prepareSockaddrStruct(server, serverIpAddr, serverPort);
@@ -71,7 +71,6 @@ void Client::connectTo(const struct sockaddr_in &address)
         mainServerSocket = sock;
     else
     {
-        seederSocketsNum++;
         seederSockets.push_back(FileSocket(sock));              // TODO obsługa błędów
     }
 
@@ -202,7 +201,6 @@ void Client::handleServerBlockInfo(msg::Message msg)
         sendAskForBlock(mainServerSocket, fileName, indexes); */
         console->setMessageState(MessageState::none);
 
-        (void)blockIndex;
         (void)port;
         (void)address;
 
@@ -212,6 +210,35 @@ void Client::handleServerBlockInfo(msg::Message msg)
     //{
         /* serwer wysłał wiadomość nieodpowiednią dla stanu */
     //}
+}
+
+void Client::handleSeederFile(FileSocket &s, msg::Message &msg)
+{
+    std::string hash = hashOnePiece(msg.buffer);
+    if(hash != s.hash)
+    {
+        std::cout << "bad hash:\n" << hash << std::endl << s.hash << std::endl;
+        //sendBadBlockHash(mainServerSocket, s.filename, s.);
+    }
+    else
+    {
+        fileManager->putPiece(*this, s.filename, s.blockIndex, std::string(msg.buffer.begin(), msg.buffer.end()));
+        sendHaveBlock(mainServerSocket, s.filename, s.blockIndex, hash);
+    }
+    
+    msg::Message(111).sendMessage(s.sockFd);
+    close(s.sockFd);
+    std::string fileName = s.filename;
+    //it = seederSockets.erase(it);
+
+    if(fileManager->isFileComplete(fileName))
+    {
+        std::cout << "Download completed!" << std::endl;
+        fileManager->removeConfig(fileName);
+        fileManager->moveSeedToOutput(fileName);
+    }
+    else
+        sendAskForBlock(mainServerSocket, fileName, fileManager->getIndexesFromConfig(fileName)); // wysyła zapytanie o kolejny blok
 }
 
 void Client::handleMessagesfromServer()
@@ -263,7 +290,6 @@ void Client::handleMessagesfromSeeders()
 
             close(it->sockFd);
             it = seederSockets.erase(it);
-            seederSocketsNum--;
         }
         if(FD_ISSET(it->sockFd, &ready))
         {
@@ -278,37 +304,13 @@ void Client::handleMessagesfromSeeders()
                 {
                     close(it->sockFd);
                     it = seederSockets.erase(it);
-                    seederSocketsNum--;
 
                     std::cout << "Connection severed" << std::endl;
                 }
                 else if(msg.type == 401)
                 {
-                    std::cout << "Fname: " << it->filename << "\nIndex: " << it->blockIndex << "\nBuffer length: " << msg.buffer.size() << " (" << msg.buf_length << ")" << std::endl;
-
-                    //sprawdz hashe
-                    std::string hash = hashOnePiece(msg.buffer);
-                    if(hash != it->hash)
-                    {
-                        std::cout << "bad hash:\n" << hash << std::endl << it->hash << std::endl;
-                        //sendBadBlockHash(mainServerSocket, it->filename, it->last_activity);
-                    }
-                    else
-                    {
-                        fileManager->putPiece(*this, it->filename, it->blockIndex, std::string(msg.buffer.begin(), msg.buffer.end()));
-                        sendHaveBlock(mainServerSocket, it->filename, it->blockIndex, hash);
-                    }
-                    
-                    msg::Message(111).sendMessage(it->sockFd);
-                    close(it->sockFd);
-                    std::string fileName = it->filename;
-                    it = seederSockets.erase(it);
-                    seederSocketsNum--;
-
-                    if(fileManager->isFileComplete(fileName)) 
-                        fileManager->removeConfig(fileName);
-                    else
-                        sendAskForBlock(mainServerSocket, fileName, fileManager->getIndexesFromConfig(fileName)); // wysyła zapytanie o kolejny blok
+                    handleSeederFile(*it, msg);
+                    it = seederSockets.erase(it);   //blargh
                 }
                 else if(msg.type == 402)
                 {
@@ -318,7 +320,6 @@ void Client::handleMessagesfromSeeders()
 
                     close(it->sockFd);
                     it = seederSockets.erase(it);
-                    seederSocketsNum--;
                 }
                 else ++it;
             }
@@ -338,7 +339,6 @@ void Client::handleMessagesfromLeechers()
 
             close(it->sockFd);
             it = leecherSockets.erase(it);
-            leecherSocketsNum--;
         }
 
         if(FD_ISSET(it->sockFd, &ready))
@@ -355,7 +355,6 @@ void Client::handleMessagesfromLeechers()
                 {
                     close(it->sockFd);
                     it = leecherSockets.erase(it);
-                    leecherSocketsNum--;
 
                     std::cout << "Connection severed" << std::endl;
                 }
@@ -658,18 +657,17 @@ void Client::run()
         if ((select(maxFd, &ready, (fd_set *)0, (fd_set *)0, &to)) == -1)
             throw ClientException("select call failed");
 
-        if (FD_ISSET(sockFd, &ready) && leecherSocketsNum<5)
+        if (FD_ISSET(sockFd, &ready) && leecherSockets.size()<5)
         {
             int newCommSock = accept(sockFd, (struct sockaddr *)0, (socklen_t *)0);
             leecherSockets.push_back(newCommSock);
-            leecherSocketsNum++;
             maxFd = std::max(maxFd,newCommSock+1);
-            std::cout << "leecherSocketsNum = " << leecherSocketsNum << std::endl;
+            std::cout << "leecherSocketsNum = " << leecherSockets.size() << std::endl;
         }
 
-        
+        handleMessagesfromServer();
         handleMessagesfromSeeders();
-        handleMessagesfromLeechers();handleMessagesfromServer();
+        handleMessagesfromLeechers();
         getUserCommands();
         handleCommands();
 

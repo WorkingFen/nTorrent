@@ -13,11 +13,13 @@ server: server/headers/server.hpp server/server.cpp runServer.cpp message/messag
 all: client server
 	mkdir -p bin
 	mkdir -p bin/client1
-	mkdir -p bin/client1/clientFiles
-	mkdir -p bin/client1/clientFiles/configFiles
+	mkdir -p bin/client1/output
+	mkdir -p bin/client1/seeds
+	mkdir -p bin/client1/seeds/configFiles
 	mkdir -p bin/client2
-	mkdir -p bin/client2/clientFiles
-	mkdir -p bin/client2/clientFiles/configFiles
+	mkdir -p bin/client2/output
+	mkdir -p bin/client2/seeds
+	mkdir -p bin/client2/seeds/configFiles
 	cp runClient bin/client1
 	cp runClient bin/client2
 	cp runServer bin

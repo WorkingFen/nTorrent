@@ -274,8 +274,7 @@ bool Client::FileManager::doesBlockExist(Client& client, const std::string& file
     else
     {
         return index * client.pieceSize < getFileSize(fileName);
-    }
-    
+    } 
 }
 
 std::vector<int> Client::FileManager::getIndexesFromConfig(const std::string& fileName)
@@ -297,7 +296,22 @@ std::vector<int> Client::FileManager::getIndexesFromConfig(const std::string& fi
     return indexes;
 }
 
-void Client::FileManager::copyFile(const std::string& filePath, const std::string& newFileName)
+void Client::FileManager::moveSeedToOutput(const std::string& fileName)
+{
+    std::ifstream oldFile;
+    oldFile.open(seedsDirName + "/" + fileName);
+
+    if(!oldFile.is_open())
+    {
+        std::cerr << fileName << " could not be found" << std::endl;
+        return;
+    }
+
+    std::ofstream newFile((outputDirName + "/" + fileName), std::ios::app);
+    newFile << oldFile.rdbuf();
+}
+
+void Client::FileManager::copyFile(const std::string& filePath, const std::string& newFileName) //nie robi tego czego bym sie spodziewał, dlatego nie użyłem, ani nie przerabiałem - Krz
 {
     if(doesFileExist(newFileName, false))
     {
@@ -329,7 +343,7 @@ void Client::FileManager::copyFile(const std::string& filePath, const std::strin
 
 bool Client::FileManager::isFileComplete(const std::string& fileName)
 {
-    return getDefaultNumberOfBlocks(fileName) == getDefaultNumberOfBlocks(fileName);   
+    return getDefaultNumberOfBlocks(fileName) == getNumberOfDownloadedBlocks(fileName);   
 }
 
 void Client::FileManager::removeConfig(const std::string& fileName)

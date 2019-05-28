@@ -20,7 +20,7 @@ class Client
         class FileManager;
         int pieceSize = 400000;
 
-        int sockFd, port, seederSocketsNum, leecherSocketsNum, maxFd;        // listen socket; przydzielony port efemeryczny; liczba socketów pobierających/wysyłających dane (nie licząc komunikacji z serwerem)
+        int sockFd, port, maxFd;        // listen socket; przydzielony port efemeryczny; liczba socketów pobierających/wysyłających dane (nie licząc komunikacji z serwerem)
         struct sockaddr_in self, server;
         fd_set ready;
         struct timeval to;
@@ -67,6 +67,8 @@ class Client
         void handleServerFileInfo(msg::Message msg);        // handler dla 201
         void handleServerBlockInfo(msg::Message msg);       // handler dla 202
 
+        void handleSeederFile(FileSocket &s, msg::Message &msg);
+
         void getUserCommands();
         void handleCommands();
 
@@ -82,7 +84,7 @@ class Client
 
         const struct sockaddr_in& getServer() const;
 
-        void shareFile(std::string directory, std::string fname);
+        void shareFile(std::string directory, std::string fname);   //to wszystko raczej prywatne, a nie publiczne
         void shareFiles();
         void sendFileInfo(int socket, std::string directory, std::string filename);
         void sendFilesInfo();

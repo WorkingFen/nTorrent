@@ -41,6 +41,7 @@ class Client::FileManager
     void copyFile(const std::string& absoluteFilePath, const std::string& newFileName);
     bool isFileComplete(const std::string& fileName);
     void removeConfig(const std::string& fileName);
+    void moveSeedToOutput(const std::string& fileName);
 };
 
 class FileManagerException : public std::exception
