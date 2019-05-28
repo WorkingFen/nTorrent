@@ -128,7 +128,7 @@ bool server::Server::delete_owner(server::block& c_block, uint ip, int port) {
     if(c_block.empty) return false;
 
     for(auto c_owner = c_block.owners.begin(); c_owner != c_block.owners.end(); c_owner++)
-        if(*(&(*c_owner)->call_addr.second) == port && *(&(*c_owner)->call_addr.first) == ip) {
+        if(*(&(*c_owner)->call_addr.sin_port) == port && *(&(*c_owner)->call_addr.sin_addr.s_addr) == ip) {
             c_block.owners.erase(c_owner);
             break;
         }
@@ -202,7 +202,8 @@ void server::Server::be_owned(server::file& c_file, int no_block) {
     for(uint i = 0; i < e_file->second.size(); i++) if(e_file->second[i] == no_block) return;
     
     if(e_file == cts_it->o_files.end()) {
-        std::vector<int> no_blocks(no_block);
+        std::vector<int> no_blocks;
+        no_blocks.push_back(no_block);
         cts_it->o_files.insert({c_file.name, no_blocks});
     }
     else e_file->second.push_back(no_block);
@@ -376,7 +377,7 @@ int server::Server::read_srv() {
             for(uint j = 0; j < i.second.blocks.size(); j++) {
                 std::cout << j << ". Block: " << i.second.blocks[j].hash << std::endl;
                 for(auto k : i.second.blocks[j].owners) {
-                    std::cout << "--- " << k->call_addr.first << ":" << k->call_addr.second << std::endl;
+                    std::cout << "--- " << k->call_addr.sin_addr.s_addr << ":" << k->call_addr.sin_port << std::endl;
                 }
             }
         }
@@ -490,8 +491,8 @@ int server::Server::read_srv() {
                 for(auto lo_ct : lo_vector) {
                     file_info.writeInt(lo_ct.second);
                     file_info.writeString(c_file->blocks[lo_ct.second].hash);
-                    file_info.writeInt(lo_ct.first->call_addr.first);
-                    file_info.writeInt(lo_ct.first->call_addr.second);
+                    file_info.writeInt(lo_ct.first->call_addr.sin_addr.s_addr);
+                    file_info.writeInt(lo_ct.first->call_addr.sin_port);
                 }
                 file_info.sendMessage(cts_it->socket);            
             }
@@ -561,8 +562,8 @@ int server::Server::read_srv() {
 #ifdef LOGS
         std::cout << std::endl << "Message type: " << msg.type << std::endl;
 #endif
-    cts_it->call_addr.first = msg.readInt();
-    cts_it->call_addr.second = msg.readInt();
+    cts_it->call_addr.sin_addr.s_addr = msg.readInt();
+    cts_it->call_addr.sin_port = msg.readInt();
     }
     else {
 #ifdef LOGS

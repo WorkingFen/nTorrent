@@ -51,7 +51,7 @@ typedef std::chrono::high_resolution_clock::time_point t_point;
 
     struct client {
         sockaddr_in address;                                // Client IP:port
-        std::pair<int, int> call_addr;                      // IP:port on which client ist listening
+        sockaddr_in call_addr;                              // IP:port on which client ist listening
         int socket;                                         // Client's socket
         int no_leeches;                                     // Number of active leeches
         t_point timeout;                                    // Time of last connection check
