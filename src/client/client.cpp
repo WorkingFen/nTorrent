@@ -205,8 +205,8 @@ void Client::handleServerBlockInfo(msg::Message msg)
 
         (void)port;
         (void)address;
-
-        leechFile(134744191,4400,fileName,blockIndex,hash);
+        std::cout<<"<handleBlockInfo> addr="<<address<<" port="<<port<<std::endl;
+        leechFile(address,port,fileName,blockIndex,hash);
     //}
     //else
     //{
@@ -380,10 +380,11 @@ void Client::handleMessagesfromLeechers()
 
 void Client::sendListeningAddress()
 {
+    std::cout<<"sending addr="<<self.sin_addr.s_addr<<" port="<<this->port<<std::endl;
     msg::Message msg(112);
 
     msg.writeInt(self.sin_addr.s_addr);
-    msg.writeInt(self.sin_port);
+    msg.writeInt(this->port);
 
     msg.sendMessage(mainServerSocket);
 }
