@@ -189,8 +189,8 @@ void Client::handleServerFileInfo(msg::Message msg)
 
 void Client::handleServerBlockInfo(msg::Message msg)
 {
-    //if (console->getMessageState() == MessageState::wait_for_block_info) // jeśli czekaliśmy na to info
-    //{
+    if (console->getMessageState() == MessageState::wait_for_block_info) // jeśli czekaliśmy na to info
+    {
         int fileNameLength = msg.readInt();                    // długość nazwy
         std::string fileName = msg.readString(fileNameLength); // nazwa pliku
         int numberOfBlocks = msg.readInt();                    // numer bloku
@@ -206,7 +206,7 @@ void Client::handleServerBlockInfo(msg::Message msg)
 
         }
 
-        console->setMessageState(MessageState::none);
+        console->setMessageState(MessageState::none);}
 
 }
 
@@ -241,7 +241,11 @@ void Client::handleSeederFile(FileSocket &s, msg::Message &msg)
     else 
     {
         if(blocksPending <= 0)
-            sendAskForBlock(mainServerSocket, fileName, blocksPerRequest, fileManager->getIndexesFromConfig(fileName)); // wysyła zapytanie o kolejny blok       
+        {
+            sendAskForBlock(mainServerSocket, fileName, blocksPerRequest, fileManager->getIndexesFromConfig(fileName)); // wysyła zapytanie o kolejny blok   
+            console->setMessageState(MessageState::wait_for_block_info);
+        }
+
     }
 }
 
