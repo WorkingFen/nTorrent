@@ -128,7 +128,7 @@ bool server::Server::delete_owner(server::block& c_block, uint ip, int port) {
     if(c_block.empty) return false;
 
     for(auto c_owner = c_block.owners.begin(); c_owner != c_block.owners.end(); c_owner++)
-        if(*(&(*c_owner)->address.sin_port) == port && *(&(*c_owner)->address.sin_addr.s_addr) == ip) {
+        if(*(&(*c_owner)->call_addr.sin_port) == port && *(&(*c_owner)->call_addr.sin_addr.s_addr) == ip) {
             c_block.owners.erase(c_owner);
             break;
         }
@@ -374,7 +374,7 @@ int server::Server::read_srv() {
             for(uint j = 0; j < i.second.blocks.size(); j++) {
                 std::cout << j << ". Block: " << i.second.blocks[j].hash << std::endl;
                 for(auto k : i.second.blocks[j].owners) {
-                    std::cout << "--- " << k->address.sin_addr.s_addr << ":" << k->address.sin_port << std::endl;
+                    std::cout << "--- " << k->call_addr.sin_addr.s_addr << ":" << k->call_addr.sin_port << std::endl;
                 }
             }
         }
