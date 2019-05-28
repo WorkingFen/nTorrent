@@ -13,7 +13,7 @@
 
 using namespace msg;
 
-Client::Client(const char ipAddr[15], const int& port, const char serverIpAddr[15], const int& serverPort) : maxFd(0), console(std::unique_ptr<ConsoleInterface>(new ConsoleInterface)), fileManager(std::unique_ptr<FileManager>(new FileManager))
+Client::Client(const char ipAddr[15], const int& port, const char serverIpAddr[15], const int& serverPort) : maxFd(0), console(std::unique_ptr<ConsoleInterface>(new ConsoleInterface)), fileManager(std::unique_ptr<FileManager>(new FileManager)), blocksPending(0)
 {
     prepareSockaddrStruct(self, ipAddr, port);
     prepareSockaddrStruct(server, serverIpAddr, serverPort);
@@ -170,7 +170,7 @@ void Client::handleServerFileInfo(msg::Message msg)
             return;
         }//do tego momentu wydaje się niepotrzebne
         
-        sendAskForBlock(mainServerSocket, fileName, indexes); // wysyła zapytanie o blok
+        sendAskForBlock(mainServerSocket, fileName,blocksPerRequest, indexes); // wysyła zapytanie o blok
         //std::cout << 123 << std::endl;
 
         console->setMessageState(MessageState::wait_for_block_info); // ustaw stan na oczekiwanie na informację skąd pobrać blok
@@ -193,26 +193,27 @@ void Client::handleServerBlockInfo(msg::Message msg)
     //{
         int fileNameLength = msg.readInt();                    // długość nazwy
         std::string fileName = msg.readString(fileNameLength); // nazwa pliku
-        int blockIndex = msg.readInt();                        // numer bloku
-        std::string hash = msg.readString(64);                 // nazwa pliku
-        int address = msg.readInt();                           // adres
-        int port = msg.readInt();                              // port
-/*
-        std::vector<int> indexes = fileManager->getIndexesFromConfig(fileName);
+        int numberOfBlocks = msg.readInt();                    // numer bloku
+        blocksPending = numberOfBlocks;
+        for(int i = 0; i < numberOfBlocks; ++i)
+        {
+            int blockIndex = msg.readInt();                        // numer bloku
+            std::string hash = msg.readString(64);                 // nazwa pliku
+            int address = msg.readInt();                           // adres
+            int port = msg.readInt();                              // port
 
-        sendAskForBlock(mainServerSocket, fileName, indexes); */
+            leechFile(address,port,fileName,blockIndex,hash);
+
+        }
+
         console->setMessageState(MessageState::none);
 
-        leechFile(address,port,fileName,blockIndex,hash);
-    //}
-    //else
-    //{
-        /* serwer wysłał wiadomość nieodpowiednią dla stanu */
-    //}
 }
 
 void Client::handleSeederFile(FileSocket &s, msg::Message &msg)
 {
+    blocksPending --;
+
     std::string hash = hashOnePiece(msg.buffer);
     if(hash != s.hash)
     {
@@ -230,14 +231,18 @@ void Client::handleSeederFile(FileSocket &s, msg::Message &msg)
     std::string fileName = s.filename;
     //it = seederSockets.erase(it);
 
+
     if(fileManager->isFileComplete(fileName))
     {
         std::cout << "Download completed!" << std::endl;
         fileManager->removeConfig(fileName);
         fileManager->moveSeedToOutput(fileName);
     }
-    else
-        sendAskForBlock(mainServerSocket, fileName, fileManager->getIndexesFromConfig(fileName)); // wysyła zapytanie o kolejny blok
+    else 
+    {
+        if(blocksPending <= 0)
+            sendAskForBlock(mainServerSocket, fileName, blocksPerRequest, fileManager->getIndexesFromConfig(fileName)); // wysyła zapytanie o kolejny blok       
+    }
 }
 
 void Client::handleMessagesfromServer()
@@ -504,14 +509,15 @@ void Client::sendHaveBlock(int socket, std::string fileName, int blockIndex, std
     haveBlock.sendMessage(socket);
 }
 
-void Client::sendAskForBlock(int socket, std::string fileName, vector<int> blockList)
+void Client::sendAskForBlock(int socket, std::string fileName, int requestedBlocks, vector<int> ownedBlockList)
 {
     msg::Message askForBlock(106);
 
     askForBlock.writeInt(fileName.size()); // file
     askForBlock.writeString(fileName);
+    askForBlock.writeInt(requestedBlocks); // file
 
-    for (auto it = blockList.begin(); it != blockList.end(); ++it) // owned block indexes
+    for (auto it = ownedBlockList.begin(); it != ownedBlockList.end(); ++it) // owned block indexes
         askForBlock.writeInt(*it);
 
     askForBlock.sendMessage(socket);

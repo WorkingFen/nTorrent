@@ -45,7 +45,9 @@ class Client
 
         std::list<FileSocket> seederSockets;                             // lista z socketami pełniącymi role leechów/peerów
         std::list<FileSocket> leecherSockets;                             // lista z socketami pełniącymi role seederów/peerów  
-        std::time_t timeout = 20;  
+        std::time_t timeout = 20; 
+        int blocksPerRequest = 5;                                       // liczba bloków o jakie prosimy serwer 
+        int blocksPending;                                              // liczba bloków którą serwer odesłał, dekrementowana po każdym pobraniu bloku. Po zdekrementowaniu do 0, wysyłane jest kolejne zapytanie o bloki do serwera
 
         std::thread input;
         msg::MessageManager msg_manager;
@@ -97,7 +99,7 @@ class Client
         void sendDeleteFile(std::string fileName);
         void sendAskForFile(std::string fileName);
         void sendHaveBlock(int socket, std::string fileName, int blockIndex, std::string hash);
-        void sendAskForBlock(int socket, std::string fileName, std::vector<int> blockList);
+        void sendAskForBlock(int socket, std::string fileName, int requestedBlocks, std::vector<int> blockList);
         void sendBadBlockHash(int socket, std::string fileName, int blockIndex, std::string seederAdress);
         void listServerFiles();
         void leechFile(const int ipAddr, int port, std::string filename, int blockIndex, std::string hash);
