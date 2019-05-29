@@ -48,15 +48,17 @@
 
 namespace server {
 typedef std::chrono::high_resolution_clock::time_point t_point;
+typedef std::map<std::string, std::map<int,int>> owned;
+typedef std::map<std::string, std::map<int, sockaddr_in>> download;
 
     struct client {
-        sockaddr_in address;                                // Client IP:port
-        sockaddr_in call_addr;                              // IP:port on which client ist listening
-        int socket;                                         // Client's socket
-        int no_leeches;                                     // Number of active leeches
-        t_point timeout;                                    // Time of last connection check
-        std::map<std::string, std::vector<int>> o_files;    // Files owned by client
-        // std::map<std::string, 
+        sockaddr_in address;            // Client IP:port
+        sockaddr_in call_addr;          // IP:port on which client is listening
+        int socket;                     // Client's socket
+        int no_leeches;                 // Number of active leeches
+        t_point timeout;                // Time of last connection check
+        owned o_files;                  // Files owned by client
+        download d_files;               // Files that are downloaded by client
 
         client() {}
         client(sockaddr_in addr, int s, int nl = 0, t_point t = std::chrono::high_resolution_clock::now()): 
@@ -134,8 +136,12 @@ typedef std::list<client>::iterator cts_list_it;
             std::pair<client*, int> find_least_occupied(file&, std::vector<int>);
 
             bool still_alive();
-            void be_owned(file&, int);
-            // void info_remove();
+            void set_leeches(std::pair<server::client*, int>&, std::string);
+            void set_leeches(std::string, int, uint, int);
+            void be_owned(std::string, int);
+            void not_owned(std::string, int);
+            void not_owned(std::string, int, uint, int);
+            void be_downloaded(std::string, int, uint, int);
 
             void run_srv();
             void close_srv();
