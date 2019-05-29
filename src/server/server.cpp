@@ -206,7 +206,26 @@ void server::Server::set_leeches(std::pair<server::client*, int>& lo_ct, std::st
 
 // Set leeches of client's downloaded file with ip:port
 void server::Server::set_leeches(std::string name, int no_block, uint ip, int port) {
-    // TODO funkcja do uwalniania klientow z pijawek rozlaczajacego sie klienta
+    file* e_file = get_file(name);
+    client* e_owner;
+    if(e_file == nullptr) return;
+    else {
+        block* e_block = get_block(*e_file, no_block);
+        if(e_block == nullptr) return;
+        else {
+            for(auto c_owner = e_block->owners.begin(); c_owner != e_block->owners.end(); c_owner++)
+                if(*(&(*c_owner)->call_addr.sin_port) == port && *(&(*c_owner)->call_addr.sin_addr.s_addr) == ip) {
+                    e_owner = *c_owner;
+                    break;
+                }
+        }
+    }
+
+    auto o_file = e_owner->o_files.find(name);
+    if(o_file != e_owner->o_files.end()) {
+        auto o_block = o_file->second.find(no_block);
+        if(o_block != o_file->second.end()) o_block->second--;
+    }
 }
 
 // Set owned file to client
@@ -241,8 +260,27 @@ void server::Server::not_owned(std::string name, int no_block) {
 
 // Set block (and file) to be not owned by client with ip:port
 void server::Server::not_owned(std::string name, int no_block, uint ip, int port) {
-    // auto e_file = cts_it->o_files.find()
-    // TODO funkcja usuwajaca blok zlego klienta
+    file* e_file = get_file(name);
+    if(e_file == nullptr) return;
+    else {
+        block* e_block = get_block(*e_file, no_block);
+        if(e_block == nullptr) return;
+        else {
+            for(auto c_owner = e_block->owners.begin(); c_owner != e_block->owners.end(); c_owner++)
+                if(*(&(*c_owner)->call_addr.sin_port) == port && *(&(*c_owner)->call_addr.sin_addr.s_addr) == ip) {
+                    auto o_file = (*c_owner)->o_files.find(name);
+                    if(o_file != (*c_owner)->o_files.end()) {
+                        auto o_block = o_file->second.find(no_block);
+                        if(o_block != o_file->second.end()) {
+                            (*c_owner)->no_leeches -= o_block->second;
+                            o_file->second.erase(o_block);
+                            if(o_file->second.empty()) (*c_owner)->o_files.erase(o_file);
+                        }
+                    }
+                    break;
+                }
+        }
+    }
 }
 
 // Add new file (or just new block) to map of to be downloaded files
@@ -261,6 +299,38 @@ void server::Server::be_downloaded(std::string name, int no_block, uint ip, int 
         auto e_block = e_file->second.find(no_block);
         if(e_block != e_file->second.end()) return;
         else e_file->second.insert({no_block, owner});
+    }
+}
+
+// Delete file of client from downloaded files and change no_leeches in 
+void server::Server::release_downloaded(std::string name, int no_block, uint ip, int port) {
+    file* e_file = get_file(name);
+    if(e_file == nullptr) return;
+    else {
+        block* e_block = get_block(*e_file, no_block);
+        if(e_block == nullptr) return;
+        else {
+            for(auto c_owner = e_block->owners.begin(); c_owner != e_block->owners.end(); c_owner++)
+                if(*(&(*c_owner)->call_addr.sin_port) == port && *(&(*c_owner)->call_addr.sin_addr.s_addr) == ip) {
+                    auto o_file = (*c_owner)->o_files.find(name);
+                    if(o_file != (*c_owner)->o_files.end()) {
+                        auto o_block = o_file->second.find(no_block);
+                        if(o_block != o_file->second.end()) {
+                            o_block->second--;
+                            (*c_owner)->no_leeches--;
+                            auto d_file = cts_it->d_files.find(name);
+                            if(d_file != cts_it->d_files.end()) {
+                                auto d_block = d_file->second.find(no_block);
+                                if(d_block != d_file->second.end()) {
+                                    d_file->second.erase(d_block);
+                                    if(d_file->second.empty()) cts_it->d_files.erase(d_file);
+                                }
+                            }
+                        }
+                    }
+                    break;
+                }
+        }
     }
 }
 
@@ -505,9 +575,13 @@ int server::Server::read_srv() {
                 }
             }
             be_owned(c_file->name, no_block);
-            // TODO
-            // Usunac pijawke z klienta, od ktorego pobierany byl blok
-            // Usunac z ewidencji blokow(plikow) pobieranych, jesli to byl ostatni blok, usunac plik
+            auto d_file = cts_it->d_files.find(c_file->name);
+            if(d_file != cts_it->d_files.end()) {
+                auto d_block = d_file->second.find(no_block);
+                if(d_block != d_file->second.end()) {
+                    release_downloaded(c_file->name, no_block, d_block->second.sin_addr.s_addr, d_block->second.sin_port);
+                }
+            }
 #ifdef LOGS
             std::cout << std::endl << "Message type: " << msg.type << std::endl;
             std::cout << "File name: " << c_file->name << std::endl;
@@ -570,18 +644,14 @@ int server::Server::read_srv() {
             block* e_block = get_block(*e_file, no_block);
             if(e_block == nullptr) {}       // Error: There is no block in that position
             else {
+                std::string name = e_file->name;
+                not_owned(name, no_block, o_addr, o_port);
                 if(delete_owner(*e_block, o_addr, o_port) && delete_block(*e_file, no_block)){
-#ifdef LOGS
-                    std::string name = e_file->name;
-#endif
                     delete_file(*e_file);   
 #ifdef LOGS
                     std::cout << std::endl << "File " << name << " has been deleted" << std::endl;
 #endif
-                }
-                // TODO
-                // Wywalic z ewidencji posiadanych plikow(blokow) u zlego klienta
-                // Usunac pijawki, ktore byly na tym bloku      
+                }      
             }      
         }
 #ifdef LOGS
@@ -659,8 +729,6 @@ void server::Server::close_ct() {
     for(auto i : cts_it->o_files)
         for(auto j : i.second) not_owned(i.first, j.first);
     
-    // TODO
-    // Uwolnic od pijawek klientow, od ktorych pobieral
     for(auto i : cts_it->d_files)
         for(auto j : i.second) set_leeches(i.first, j.first, j.second.sin_addr.s_addr, j.second.sin_port);
 

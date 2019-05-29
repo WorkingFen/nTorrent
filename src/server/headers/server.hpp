@@ -142,6 +142,7 @@ typedef std::list<client>::iterator cts_list_it;
             void not_owned(std::string, int);
             void not_owned(std::string, int, uint, int);
             void be_downloaded(std::string, int, uint, int);
+            void release_downloaded(std::string, int, uint, int);
 
             void run_srv();
             void close_srv();
