@@ -505,8 +505,7 @@ void Client::sendHaveBlock(int socket, std::string fileName, int blockIndex, std
 
     haveBlock.writeInt(blockIndex); // block index
 
-    haveBlock.writeInt(hash.size()); // hash
-    haveBlock.writeString(hash);
+    haveBlock.writeString(hash); // hash
 
     haveBlock.sendMessage(socket);
 }

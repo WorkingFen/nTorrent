@@ -698,12 +698,10 @@ int server::Server::read_srv() {
             switch(add_block_owner(*c_file, msg.readString(64), no_block)) {
                 case MSG_RNGERROR: {
                             // Error: There is no block in that position
-                            std::cout << "DUPA1" << std::endl;
                     break;
                 }
                 case MSG_ERROR: {
                             // Error: Hashes don't match
-                            std::cout << "DUPA2" << std::endl;
                     break;
                 }
             }
