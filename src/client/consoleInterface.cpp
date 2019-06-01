@@ -155,6 +155,9 @@ void Client::ConsoleInterface::fileDownload(Client &client, const std::vector<st
     }
     else
     {
+        if(client.fileManager->doesFileExist(input[1], false))
+            throw FileManagerException("Chosen file is already in your possession!");
+
         client.sendAskForFile(input[1]);                 // wysłanie żądania o plik do serwera
         messageState = MessageState::wait_for_file_info; // ustawienie stanu na czekanie na odpowiedź od serwera o pliku
         chosenFile = input[1];                           // zapisanie wybranego pliku

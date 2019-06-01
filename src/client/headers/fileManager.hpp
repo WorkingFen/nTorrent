@@ -22,12 +22,12 @@ class Client::FileManager
     void removeFileIfFragmented(const std::string& fileName);           //  czyści katalog clientFiles
     int getNumberOfDownloadedBlocks(const std::string& fileName);
     int getDefaultNumberOfBlocks(const std::string& fileName);
-    bool doesFileExist(const std::string& fileName, const bool isConfig);
 
     public:
     FileManager();
     ~FileManager();
 
+    bool doesFileExist(const std::string& fileName, const bool isConfig);
     void printOutputFolderContent();
     void printSeedsFolderContent();
     std::vector<std::string> getDirFiles();   
