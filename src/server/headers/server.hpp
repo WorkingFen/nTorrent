@@ -84,10 +84,12 @@
 #else 
     #define BOLDF ""
     #define REDF ""
-    #define BREDF ""
+    #define BGREENF ""
     #define SKYF ""
     #define MINTF ""
     #define GOLDF ""
+    #define BREDF ""
+    #define ORANGEF ""
     #define RESETF ""
 #endif
 
@@ -166,7 +168,8 @@ typedef std::list<client>::iterator cts_list_it;
             ~Server();
 
             // Log functions
-            void show_ctfiles(); 
+            void show_ct_ofiles();
+            void show_ct_dfiles(); 
             void show_srvfiles(file&);
 
             file* add_file(int, std::string);
