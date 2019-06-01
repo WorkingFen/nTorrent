@@ -150,7 +150,7 @@ bool MessageManager::assembleMsg(int socket)
 
     read_result = read(socket, &buffer[0], remainingMsgSize(socket));
     if(read_result == -1) return false;
-    buffers[socket].insert(buffers[socket].end(), buffer.begin(), buffer.end());
+    buffers[socket].insert(buffers[socket].end(), buffer.begin(), buffer.begin() + read_result);
 
     if(remainingMsgSize(socket) > 0) return false;
 

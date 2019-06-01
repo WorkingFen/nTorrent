@@ -203,11 +203,9 @@ void Client::handleServerBlockInfo(msg::Message msg)
             int port = msg.readInt();                              // port
 
             leechFile(address,port,fileName,blockIndex,hash);
-
         }
 
         console->setMessageState(MessageState::none);}
-
 }
 
 void Client::handleSeederFile(FileSocket &s, msg::Message &msg)
@@ -230,7 +228,6 @@ void Client::handleSeederFile(FileSocket &s, msg::Message &msg)
     close(s.sockFd);
     std::string fileName = s.filename;
     //it = seederSockets.erase(it);
-
 
     if(fileManager->isFileComplete(fileName))
     {

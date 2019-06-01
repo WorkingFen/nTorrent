@@ -47,7 +47,7 @@ class Client
         std::list<FileSocket> leecherSockets;                             // lista z socketami pełniącymi role seederów/peerów  
         std::time_t timeout = 20; 
         int blocksPerRequest = 5;                                       // liczba bloków o jakie prosimy serwer 
-        int blocksPending;                                              // liczba bloków którą serwer odesłał, dekrementowana po każdym pobraniu bloku. Po zdekrementowaniu do 0, wysyłane jest kolejne zapytanie o bloki do serwera
+        int blocksPending;                                            // liczba bloków którą serwer odesłał, dekrementowana po każdym pobraniu bloku. Po zdekrementowaniu do 0, wysyłane jest kolejne zapytanie o bloki do serwera
 
         std::thread input;
         msg::MessageManager msg_manager;
