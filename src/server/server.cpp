@@ -603,7 +603,13 @@ int server::Server::read_srv() {
         file* c_file = add_file(msg.readInt(), msg.readString(msg.readInt()));  // Weird specification of C++ compiler?
         for(uint no_block = 0; msg.buf_length > 0; no_block++) {
             block* c_block = add_block(*c_file, msg.readString(64), no_block); 
-            if(c_block == nullptr) {}             // Error: Hashes don't match
+            if(c_block == nullptr) {                        // Error: Hashes don't match
+                msg::Message bad_hash(203);
+                bad_hash.writeInt(c_file->name.size());
+                bad_hash.writeString(c_file->name);
+                bad_hash.writeInt(no_block);
+                bad_hash.sendMessage(cts_it->socket);
+            }             
             else {
                 add_owner(*c_block, &*cts_it);
                 be_owned(c_file->name, no_block);
@@ -641,12 +647,21 @@ int server::Server::read_srv() {
                 #endif
                 #endif
             }
-        else {}            // Error: There are no files
+        else {                                      // Error: There are no files
+            msg::Message file_list(207);
+            file_list.sendMessage(cts_it->socket);
+        }            
     }
     // Delete client's file
     else if(msg.type == 103) {
-        file* e_file = get_file(msg.readString(msg.readInt()));
-        if(e_file == nullptr) {}        // Error: There is no file with this name
+        std::string name = msg.readString(msg.readInt());
+        file* e_file = get_file(name);
+        if(e_file == nullptr) {                     // Error: There is no file with this name
+            msg::Message bad_name(204);
+            bad_name.writeInt(name.size());
+            bad_name.writeString(name);
+            bad_name.sendMessage(cts_it->socket);
+        }        
         else {
             block* e_block;
             for(uint no_block = 0; no_block < e_file->blocks.size(); no_block++) {
@@ -671,8 +686,14 @@ int server::Server::read_srv() {
     }
     // File download request
     else if(msg.type == 104) {
-        file* c_file = get_file(msg.readString(msg.readInt()));
-        if(c_file == nullptr) {}            // Error: There is no file with this name
+        std::string name = msg.readString(msg.readInt());
+        file* c_file = get_file(name);
+        if(c_file == nullptr) {                     // Error: There is no file with this name
+            msg::Message bad_name(204);
+            bad_name.writeInt(name.size());
+            bad_name.writeString(name);
+            bad_name.sendMessage(cts_it->socket);
+        }            
         else {
             msg::Message file_cfg(201);
             file_cfg.writeInt(c_file->name.size());
@@ -691,17 +712,31 @@ int server::Server::read_srv() {
         #ifdef OWNEDFILES
         show_ct_dfiles();
         #endif
-        file* c_file = get_file(msg.readString(msg.readInt()));
-        if(c_file == nullptr) {}            // Error: There is no file with this name
+        std::string name = msg.readString(msg.readInt());
+        file* c_file = get_file(name);
+        if(c_file == nullptr) {                     // Error: There is no file with this name
+            msg::Message bad_name(204);
+            bad_name.writeInt(name.size());
+            bad_name.writeString(name);
+            bad_name.sendMessage(cts_it->socket);
+        }            
         else {
             int no_block = msg.readInt();
             switch(add_block_owner(*c_file, msg.readString(64), no_block)) {
-                case MSG_RNGERROR: {
-                            // Error: There is no block in that position
+                case MSG_RNGERROR: {                // Error: There is no block in that position
+                    msg::Message bad_block(205);
+                    bad_block.writeInt(c_file->name.size());
+                    bad_block.writeString(c_file->name);
+                    bad_block.writeInt(no_block);
+                    bad_block.sendMessage(cts_it->socket);         
                     break;
                 }
-                case MSG_ERROR: {
-                            // Error: Hashes don't match
+                case MSG_ERROR: {                   // Error: Hashes don't match
+                    msg::Message bad_hash(203);
+                    bad_hash.writeInt(c_file->name.size());
+                    bad_hash.writeString(c_file->name);
+                    bad_hash.writeInt(no_block);
+                    bad_hash.sendMessage(cts_it->socket);        
                     break;
                 }
             }
@@ -729,8 +764,14 @@ int server::Server::read_srv() {
     else if(msg.type == 106) {
         uint no_blocks;
         std::vector<int> blocks_no;
-        file* c_file = get_file(msg.readString(msg.readInt()));
-        if(c_file == nullptr) {}                // Error: There is no file with this name
+        std::string name = msg.readString(msg.readInt());
+        file* c_file = get_file(name);
+        if(c_file == nullptr) {                     // Error: There is no file with this name
+            msg::Message bad_name(204);
+            bad_name.writeInt(name.size());
+            bad_name.writeString(name);
+            bad_name.sendMessage(cts_it->socket);
+        }
         else {
             no_blocks = msg.readInt();
             while(msg.buf_length > 0)
@@ -740,7 +781,21 @@ int server::Server::read_srv() {
             std::vector<std::pair<server::client*, int>> lo_vector;
             for(uint i = 0; i < no_blocks; i++) {
                 auto lo_ct = find_least_occupied(*c_file, blocks_no);
-                if(lo_ct.first == nullptr) {}         // Error: There are no blocks that could be downloaded
+                if(lo_ct.first == nullptr) {        // Error: There are no blocks that could be downloaded
+                    msg::Message no_block(206);
+                    no_block.writeInt(c_file->name.size());
+                    no_block.writeString(c_file->name);
+                    no_block.sendMessage(cts_it->socket);
+                    for(int block_num = c_file->blocks.size(); block_num > 0; block_num--) {
+                        block c_block = c_file->blocks[block_num-1];
+                        for(auto c_owner : c_block.owners) {
+                            delete_owner(c_block, c_owner->call_addr.sin_addr.s_addr, c_owner->call_addr.sin_port);
+                            not_owned(c_file->name, block_num-1, c_owner->call_addr.sin_addr.s_addr, c_owner->call_addr.sin_port);
+                        }
+                        delete_block(*c_file, block_num-1);
+                    }
+                    delete_file(*c_file);
+                }
                 else {
                     be_downloaded(c_file->name, lo_ct.second, lo_ct.first->call_addr.sin_addr.s_addr, lo_ct.first->call_addr.sin_port);
                     blocks_no.push_back(lo_ct.second);
@@ -771,15 +826,27 @@ int server::Server::read_srv() {
     }
     // Wrong hash from seeder
     else if(msg.type == 107) {
-        file* e_file = get_file(msg.readString(msg.readInt()));
         int no_block, o_addr, o_port;
-        if(e_file == nullptr) {}           // Error: There is no file with this name
+        std::string name = msg.readString(msg.readInt());
+        file* e_file = get_file(name);
+        if(e_file == nullptr) {                     // Error: There is no file with this name
+            msg::Message bad_name(204);
+            bad_name.writeInt(name.size());
+            bad_name.writeString(name);
+            bad_name.sendMessage(cts_it->socket);
+        }
         else {
             no_block = msg.readInt();
             o_addr = msg.readInt();
             o_port = msg.readInt();
             block* e_block = get_block(*e_file, no_block);
-            if(e_block == nullptr) {}       // Error: There is no block in that position
+            if(e_block == nullptr) {               // Error: There is no block in that position
+                msg::Message bad_block(205);
+                bad_block.writeInt(e_file->name.size());
+                bad_block.writeString(e_file->name);
+                bad_block.writeInt(no_block);
+                bad_block.sendMessage(cts_it->socket);
+            }
             else {
                 std::string name = e_file->name;
                 not_owned(name, no_block, o_addr, o_port);
