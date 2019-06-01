@@ -135,7 +135,7 @@ typedef std::list<client>::iterator cts_list_it;
 
     class Server {
         private:
-            static const int pieceSize = 100000;
+            static const int pieceSize = 5000000;
 
             sockaddr_in server;                     // Server IP:port
             int listener;                           // Server-listener socket

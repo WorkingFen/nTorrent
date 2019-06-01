@@ -13,7 +13,7 @@
 
 using namespace msg;
 
-Client::Client(const char ipAddr[15], const int& port, const char serverIpAddr[15], const int& serverPort) : maxFd(0), console(std::unique_ptr<ConsoleInterface>(new ConsoleInterface)), fileManager(std::unique_ptr<FileManager>(new FileManager)), blocksPending(0)
+Client::Client(const char ipAddr[15], const int& port, const char serverIpAddr[15], const int& serverPort) : maxFd(0), blocksPending(0), console(std::unique_ptr<ConsoleInterface>(new ConsoleInterface)), fileManager(std::unique_ptr<FileManager>(new FileManager))
 {
     prepareSockaddrStruct(self, ipAddr, port);
     prepareSockaddrStruct(server, serverIpAddr, serverPort);
@@ -65,6 +65,7 @@ void Client::connectTo(const struct sockaddr_in &address, int isServer)
     if (connect(sock, (struct sockaddr *)&address, sizeof address) == -1) // TODO obsługa błędów - dodać poprawne zamknięcie
         throw ClientException("connect call failed");
 
+    keep_alive_flag = true;
     std::cout << "Connected to sbd" << std::endl;
 
     if (address.sin_addr.s_addr == server.sin_addr.s_addr)
@@ -203,11 +204,9 @@ void Client::handleServerBlockInfo(msg::Message msg)
             int port = msg.readInt();                              // port
 
             leechFile(address,port,fileName,blockIndex,hash);
-
         }
 
         console->setMessageState(MessageState::none);}
-
 }
 
 void Client::handleSeederFile(FileSocket &s, msg::Message &msg)
@@ -230,7 +229,6 @@ void Client::handleSeederFile(FileSocket &s, msg::Message &msg)
     close(s.sockFd);
     std::string fileName = s.filename;
     //it = seederSockets.erase(it);
-
 
     if(fileManager->isFileComplete(fileName))
     {
@@ -642,6 +640,7 @@ void Client::turnOff()
 {
     pthread_kill(signal_thread.native_handle(), SIGINT); // ubicie ewentualnego sigwaita
     signal_thread.join();
+    keep_alive.join();
     disconnect();
 }
 
@@ -662,12 +661,29 @@ void Client::setFileDescrMask()
         FD_SET(i.sockFd, &ready);
 }
 
+void Client::keepAliveThread()
+{
+    std::time_t keep_alive_timer = std::time(0);
+    while(!interrupted_flag && !run_stop_flag && console->getState() != State::down)
+    {
+        if(keep_alive_flag)
+        {
+            if (std::time(0) - keep_alive_timer > 5) //keep_alive co 5s
+            {
+                if (mainServerSocket != -1)
+                    msg::Message(110).sendMessage(mainServerSocket);
+                keep_alive_timer = std::time(0);
+            }
+        }
+        
+    }
+}
+
 void Client::run()
 {
     setSigmask();                                              // Set sigmask for all threads
     signal_thread = std::thread(&Client::signal_waiter, this); // Create the sigwait thread
-
-    std::time_t keep_alive_timer = std::time(0);
+    keep_alive = std::thread(&Client::keepAliveThread, this); // Create the sigwait thread
 
     while (!interrupted_flag && !run_stop_flag && console->getState() != State::down)
     {
@@ -692,13 +708,6 @@ void Client::run()
         handleMessagesfromLeechers();
         getUserCommands();
         handleCommands();
-
-        if (std::time(0) - keep_alive_timer > 5) //keep_alive co 5s
-        {
-            if (mainServerSocket != -1)
-                msg::Message(110).sendMessage(mainServerSocket);
-            keep_alive_timer = std::time(0);
-        }
     }
     turnOff();
 }
