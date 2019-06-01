@@ -175,7 +175,9 @@ void Client::FileManager::putPiece(Client& client, const std::string& fileName, 
     filePieces.open(path);
 
     if(!filePieces.is_open())
+    {
         throw FileManagerException ("File: " + path + " could not be opened.");
+    }
 
 	const off_t offset = index * client.pieceSize;
 	filePieces.seekp(long(offset), std::ios_base::beg);
@@ -190,7 +192,9 @@ void Client::FileManager::putPiece(Client& client, const std::string& fileName, 
     configFile.open(configPath, std::ios::app);
 
     if(!configFile.is_open())
+    {
         throw FileManagerException ("File: " + configPath + " could not be opened.");
+    }
 
 	configFile << index;
 	configFile << std::endl;
@@ -245,7 +249,9 @@ std::vector<char> Client::FileManager::getBlockBytes(Client& client, const std::
     file.open(path);
     
     if(!file.is_open())
+    {
         throw FileManagerException("File: " + path + " could not be opened.");
+    }
 
 	const off_t offset = index * client.pieceSize;
 	file.seekp(long(offset), std::ios_base::beg);

@@ -49,17 +49,20 @@ class Client
         int blocksPerRequest = 5;                                       // liczba bloków o jakie prosimy serwer 
         int blocksPending;                                            // liczba bloków którą serwer odesłał, dekrementowana po każdym pobraniu bloku. Po zdekrementowaniu do 0, wysyłane jest kolejne zapytanie o bloki do serwera
 
-        std::thread input;
         msg::MessageManager msg_manager;
         std::unique_ptr<ConsoleInterface> console;
         std::unique_ptr<FileManager> fileManager;
 
-        std::thread signal_thread;              
+        std::thread signal_thread;   
+        std::thread keep_alive;
+           
         sigset_t signal_set;					// do ustawienia sigmask
         bool interrupted_flag = false;			// sygnalizuje użycie Ctrl+C
         bool run_stop_flag = false;             // koniec pętli run
+        bool keep_alive_flag = false;
 
         void signal_waiter();					// obsługa siginta na fredach
+        void keepAliveThread();
         
         void setSigmask();
         void prepareSockaddrStruct(struct sockaddr_in& x, const char ipAddr[15], const int& port);
