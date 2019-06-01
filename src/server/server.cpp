@@ -1,11 +1,4 @@
-#include "headers/server.hpp"
-
-/***
- * std::string text;
- * for(auto i : msg.buffer) if(i < 'A' || i > 'z') text += std::to_string(i); else text += i;
- * std::cout << text << std::endl;
- ***/   
-
+#include "headers/server.hpp"  
 
 // Wait for SIGINT to occur
 void server::Server::signal_waiter() {
@@ -13,7 +6,10 @@ void server::Server::signal_waiter() {
 
     sigwait(&signal_set, &sig);
     if(sig == SIGINT) {
-        std::cout << "\rReceived SIGINT. Exiting..." << std::endl;
+#ifdef LOGS
+        std::cout << REDF << BOLDF << "\rReceived SIGINT. Exiting...";
+        std::cout << std::endl << RESETF;
+#endif
         sigint_flag = true;
     }
 }
@@ -385,11 +381,13 @@ void server::Server::bind_srv(const char srv_ip[15], const int& srv_port) {
     if(bind(listener, (sockaddr*)&server, sizeof(server)) == -1)
         throw std::runtime_error("Can't bind to IP:port");
 
-#ifdef SOCKNAME
+#ifdef SRVNAME
     socklen_t sa_len = sizeof(server);
     if(getsockname(listener, (sockaddr*)&server, &sa_len) == -1)
-        throw std::runtime_error("Can't get socket name");    
-    std::cout << "Successfully connected and listening at: " << srv_ip << ":" << ntohs(server.sin_port) << std::endl;
+        throw std::runtime_error("Can't get socket name");
+    std::cout << SKYF << BOLDF << "Successfully connected and listening at: ";
+    std::cout << MINTF << srv_ip << ":" << ntohs(server.sin_port);
+    std::cout << std::endl << RESETF;
 #endif
 }
 
@@ -432,12 +430,17 @@ void server::Server::accept_srv() {
             memset(svc, 0, NI_MAXSERV);
 
             if(getnameinfo((sockaddr*)&ct_addr, sizeof(ct_addr), host, NI_MAXHOST, svc, NI_MAXSERV, 0)) {
-                std::cout << host << " connected on " << svc << std::endl;
+                std::cout << MINTF << host;
+                std::cout << GOLDF << " connected on ";
+                std::cout << MINTF << svc;
             }
             else {
                 inet_ntop(AF_INET, &ct_addr.sin_addr, host, NI_MAXHOST);
-                std::cout << host << " connected on " << ntohs(ct_addr.sin_port) << std::endl;
+                std::cout << MINTF << host;
+                std::cout << GOLDF << " connected on ";
+                std::cout << MINTF << ntohs(ct_addr.sin_port);
             }
+            std::cout << std::endl << RESETF;
 #endif
         }
     }
@@ -470,9 +473,18 @@ int server::Server::read_srv() {
 
     msg::Message msg = msg_manager.readMsg(cts_it->socket);
 
+#ifdef MSGINFO
+    std::cout << BGREENF << std::endl << "Message type: " << msg.type << "\t";
+#ifdef MSGADV
+    std::cout << msg.getType(msg.type);
+#endif
+    std::cout << RESETF;
+#endif
     if(msg.type == -1) {
-#ifdef LOGS
-        std::cerr << "There was a connection issue" << std::endl;
+#ifdef ERROR
+        std::cerr << std::endl << REDF << BOLDF;
+        std::cerr << "There was a connection issue";
+        std::cerr << std::endl << RESETF;
 #endif        
         return SRV_ERROR;
     }
@@ -487,30 +499,62 @@ int server::Server::read_srv() {
                 be_owned(c_file->name, no_block);
             }
         }
-#ifdef LOGS
-        std::cout << std::endl << "Message type: " << msg.type << std::endl;
+#ifdef MSGADV
+        std::cout << std::endl << BGREENF;
         std::cout << "File name: " << c_file->name << std::endl;
         std::cout << "File size: " << c_file->size << std::endl;
-        for(auto i : c_file->blocks)
-            std::cout << "Piece hash: " << i.hash << std::endl;
+        for(auto c_block : c_file->blocks)
+            std::cout << "Piece hash: " << c_block.hash << std::endl;
+        std::cout << RESETF;
 #endif
-#ifdef FILES
-        for(auto i : files) {
-            std::cout << std::endl << "File: " << i.second.name << std::endl;
-            for(uint j = 0; j < i.second.blocks.size(); j++) {
-                std::cout << j << ". Block: " << i.second.blocks[j].hash << std::endl;
-                for(auto k : i.second.blocks[j].owners) {
-                    std::cout << "--- " << k->call_addr.sin_addr.s_addr << ":" << k->call_addr.sin_port << std::endl;
+#ifdef OWNEDFILES
+        std::map<client*, std::vector<int>> client_info;
+        std::cout << std::endl << BGREENF;
+        std::cout << "File: " << c_file->name << std::endl;
+        for(uint block_num = 0; block_num < c_file->blocks.size(); block_num++) {
+#ifdef FILESADV
+            std::cout << block_num << ". Block: " << c_file->blocks[block_num].hash << std::endl;
+#endif
+            for(auto c_owner : c_file->blocks[block_num].owners) {
+                auto c_client = client_info.find(c_owner);
+                if(c_client == client_info.end()) {
+                    std::vector<int> no_blocks;
+                    no_blocks.push_back(block_num);
+                    client_info.insert({c_owner, no_blocks});
+                }
+                else c_client->second.push_back(block_num);
+            }
+        }
+        for(auto e_client : client_info) {
+            std::cout << "--- ";
+            std::cout << MINTF << e_client.first->call_addr.sin_addr.s_addr;
+            std::cout << ":" << e_client.first->call_addr.sin_port << std::endl;
+            std::cout << BGREENF << "# ";
+            int c_num;
+            bool cont = false;
+            for(auto e_block_num : e_client.second) {
+                if(e_block_num == e_client.second.front()) {
+                    c_num = e_block_num;
+                    std::cout << "[" << e_block_num;
+                }
+                if(e_block_num != c_num + 1 && e_block_num != c_num) {
+                    if(cont) std::cout << "-" << c_num << ", " << e_block_num;
+                    else std::cout << ", " << e_block_num;
+                    cont = false;
+                }
+                else cont = true;
+                c_num = e_block_num;
+                if(e_block_num == e_client.second.back()) {
+                    if(cont) std::cout << "-" << c_num << "]";
+                    else std::cout << "]";
                 }
             }
         }
+        std::cout << std::endl << RESETF;
 #endif
     }
     // List all files
     else if(msg.type == 102) {
-#ifdef LOGS
-        std::cout << std::endl << "Message type: " << msg.type << std::endl;
-#endif 
         if(!files.empty())
             for(auto c_file : files) {
                 msg::Message file_list(201);
@@ -518,6 +562,54 @@ int server::Server::read_srv() {
                 file_list.writeString(c_file.first);
                 file_list.writeInt(c_file.second.size);
                 file_list.sendMessage(cts_it->socket);
+#ifdef FILES
+                std::cout << std::endl << BGREENF;
+                std::cout << "File name: " << c_file.first << "\t";
+                std::cout << "Size: " << c_file.second.size;
+                std::cout << std::endl << RESETF;
+#ifdef OWNEDFILES
+                std::map<client*, std::vector<int>> client_info;
+                std::cout << std::endl << BGREENF;
+                std::cout << "File: " << c_file.second.name << std::endl;
+                for(uint block_num = 0; block_num < c_file.second.blocks.size(); block_num++) {
+                    for(auto c_owner : c_file.second.blocks[block_num].owners) {
+                        auto c_client = client_info.find(c_owner);
+                        if(c_client == client_info.end()) {
+                            std::vector<int> no_blocks;
+                            no_blocks.push_back(block_num);
+                            client_info.insert({c_owner, no_blocks});
+                        }
+                        else c_client->second.push_back(block_num);
+                    }
+                }
+                for(auto e_client : client_info) {
+                    std::cout << "--- ";
+                    std::cout << MINTF << e_client.first->call_addr.sin_addr.s_addr;
+                    std::cout << ":" << e_client.first->call_addr.sin_port << std::endl;
+                    std::cout << BGREENF << "# ";
+                    int c_num;
+                    bool cont = false;
+                    for(auto e_block_num : e_client.second) {
+                        if(e_block_num == e_client.second.front()) {
+                            c_num = e_block_num;
+                            std::cout << "[" << e_block_num;
+                        }
+                        if(e_block_num != c_num + 1 && e_block_num != c_num) {
+                            if(cont) std::cout << "-" << c_num << ", " << e_block_num;
+                            else std::cout << ", " << e_block_num;
+                            cont = false;
+                        }
+                        else cont = true;
+                        c_num = e_block_num;
+                        if(e_block_num == e_client.second.back()) {
+                            if(cont) std::cout << "-" << c_num << "]";
+                            else std::cout << "]";
+                        }
+                    }
+                }
+                std::cout << std::endl << RESETF;
+#endif
+#endif
             }
         else {}            // Error: There are no files
     }
@@ -532,22 +624,23 @@ int server::Server::read_srv() {
                 std::string name = e_file->name;
                 if(delete_owner(*e_block) && delete_block(*e_file, no_block)){
                     delete_file(*e_file);   
-#ifdef LOGS
-                    std::cout << std::endl << "File " << name << " has been deleted" << std::endl;
+#ifdef FILES
+                    std::cout << std::endl << ORANGEF;
+                    std::cout << "File " << name << " has been deleted";
+                    std::cout << std::endl << RESETF;
 #endif
                 }
                 not_owned(name, no_block);
             }
         }
-#ifdef LOGS
-        std::cout << std::endl << "Message type: " << msg.type << std::endl;
+#ifdef MSGADV
+        std::cout << std::endl << BGREENF;
+        std::cout << "File name: " << e_file->name;
+        std::cout << std::endl << RESETF;
 #endif
     }
     // File download request
     else if(msg.type == 104) {
-#ifdef LOGS
-        std::cout << std::endl << "Message type: " << msg.type << std::endl;
-#endif
         file* c_file = get_file(msg.readString(msg.readInt()));
         if(c_file == nullptr) {}            // Error: There is no file with this name
         else {
@@ -557,9 +650,72 @@ int server::Server::read_srv() {
             file_cfg.writeInt(c_file->size);
             file_cfg.sendMessage(cts_it->socket);
         }
+#ifdef MSGADV
+        std::cout << std::endl << BGREENF;
+        std::cout << "File name: " << e_file->name;
+        std::cout << std::endl << RESETF;
+#endif
     }
     // Inform about block possession
     else if(msg.type == 105) {
+#ifdef LOGS
+        std::cout << std::endl << GOLDF;
+        std::cout << "Owned files: " << std::endl;
+        std::cout << "###" << std::endl;
+        for(auto o_file : cts_it->o_files) {
+            std::cout << "# " << o_file.first << " - [";
+            int c_num;
+            bool cont = false;
+            bool first = true;
+            for(auto e_block_num : o_file.second) {
+                if(first) {
+                    c_num = e_block_num.first + 1;
+                    first = false;
+                    std::cout << e_block_num.first;
+                }
+                else if(e_block_num.first == c_num) {
+                    cont = true;
+                    c_num++;
+                }
+                else {
+                    if(cont) std::cout << "-" << c_num-1 << ", " << e_block_num.first;
+                    else std::cout << ", " << e_block_num.first;
+                    c_num = e_block_num.first + 1;
+                }
+            }
+            if(cont) std::cout << "-" << c_num-1 << "]";
+            else std::cout << "]";
+            std::cout << std::endl;
+        }
+        std::cout << "Downloading files: " << std::endl;
+        std::cout << "###" << std::endl;
+        for(auto d_file : cts_it->d_files) {
+            std::cout << "# " << d_file.first << " - [";
+            int c_num;
+            bool cont = false;
+            bool first = true;
+            for(auto e_block_num : d_file.second) {
+                if(first) {
+                    c_num = e_block_num.first + 1;
+                    first = false;
+                    std::cout << e_block_num.first;
+                }
+                else if(e_block_num.first == c_num) {
+                    cont = true;
+                    c_num++;
+                }
+                else {
+                    if(cont) std::cout << "-" << c_num-1 << ", " << e_block_num.first;
+                    else std::cout << ", " << e_block_num.first;
+                    c_num = e_block_num.first + 1;
+                }
+            }
+            if(cont) std::cout << "-" << c_num-1 << "]";
+            else std::cout << "]";
+            std::cout << std::endl;
+        }
+        std::cout << RESETF;
+#endif
         file* c_file = get_file(msg.readString(msg.readInt()));
         if(c_file == nullptr) {}            // Error: There is no file with this name
         else {
@@ -582,19 +738,75 @@ int server::Server::read_srv() {
                     release_downloaded(c_file->name, no_block, d_block->second.sin_addr.s_addr, d_block->second.sin_port);
                 }
             }
-#ifdef LOGS
-            std::cout << std::endl << "Message type: " << msg.type << std::endl;
+#ifdef MSGADV
+            std::cout << std::endl << GREENF;
             std::cout << "File name: " << c_file->name << std::endl;
             std::cout << "Piece number: " << no_block << std::endl;
-            std::cout << "Piece hash: " << c_file->blocks[no_block].hash << std::endl;
+            std::cout << "Piece hash: " << c_file->blocks[no_block].hash;
+            std::cout << std::endl << RESETF;
+#endif
+#ifdef LOGS
+        std::cout << std::endl << GOLDF;
+        std::cout << "Owned files: " << std::endl;
+        std::cout << "###" << std::endl;
+        for(auto o_file : cts_it->o_files) {
+            std::cout << "# " << o_file.first << " - [";
+            int c_num;
+            bool cont = false;
+            bool first = true;
+            for(auto e_block_num : o_file.second) {
+                if(first) {
+                    c_num = e_block_num.first + 1;
+                    first = false;
+                    std::cout << e_block_num.first;
+                }
+                else if(e_block_num.first == c_num) {
+                    cont = true;
+                    c_num++;
+                }
+                else {
+                    if(cont) std::cout << "-" << c_num-1 << ", " << e_block_num.first;
+                    else std::cout << ", " << e_block_num.first;
+                    c_num = e_block_num.first + 1;
+                }
+            }
+            if(cont) std::cout << "-" << c_num-1 << "]";
+            else std::cout << "]";
+            std::cout << std::endl;
+        }
+        std::cout << "Downloading files: " << std::endl;
+        std::cout << "###" << std::endl;
+        for(auto d_file : cts_it->d_files) {
+            std::cout << "# " << d_file.first << " - [";
+            int c_num;
+            bool cont = false;
+            bool first = true;
+            for(auto e_block_num : d_file.second) {
+                if(first) {
+                    c_num = e_block_num.first + 1;
+                    first = false;
+                    std::cout << e_block_num.first;
+                }
+                else if(e_block_num.first == c_num) {
+                    cont = true;
+                    c_num++;
+                }
+                else {
+                    if(cont) std::cout << "-" << c_num-1 << ", " << e_block_num.first;
+                    else std::cout << ", " << e_block_num.first;
+                    c_num = e_block_num.first + 1;
+                }
+            }
+            if(cont) std::cout << "-" << c_num-1 << "]";
+            else std::cout << "]";
+            std::cout << std::endl;
+        }
+        std::cout << RESETF;
 #endif
         }
     }
     // Give client information about block to download
     else if(msg.type == 106) {
-#ifdef LOGS
-        std::cout << std::endl << "Message type: " << msg.type << std::endl;
-#endif
         file* c_file = get_file(msg.readString(msg.readInt()));
         if(c_file == nullptr) {}                // Error: There is no file with this name
         else {
@@ -654,9 +866,6 @@ int server::Server::read_srv() {
                 }      
             }      
         }
-#ifdef LOGS
-        std::cout << std::endl << "Message type: " << msg.type << std::endl;
-#endif
     }
     /*else if(msg.type == 108) {
         auto foo = files.find(msg.readString(msg.readInt()));
@@ -668,14 +877,13 @@ int server::Server::read_srv() {
             std::cout << std::endl << "File " << name << " has been deleted" << std::endl;
 #endif
         }
-#ifdef LOGS
-        std::cout << std::endl << "Message type: " << msg.type << std::endl;
-#endif
     }*/
     // Client keepalive
     else if(msg.type == 110) {
 #ifdef KEEPALIVE
-        std::cout << "KeepAlive on socket number: " << cts_it->socket << std::endl;
+        std::cout << GOLDF << "[KeepAlive] Socket: ";
+        std::cout << MINTF << cts_it->socket;
+        std::cout << std::endl << RESETF;
 #endif
         cts_it->timeout = std::chrono::high_resolution_clock::now();
         msg::Message reply(209);
@@ -684,31 +892,45 @@ int server::Server::read_srv() {
     // Dissconnect current client
     else if(msg.type == 111) {
 #ifdef LOGS
-        std::cout << "The client disconnected" << std::endl;
+        std::cout << std::endl << GOLDF;
+        std::cout << "Client disconnected";
+        std::cout << std::endl << RESETF;
 #endif
         return SRV_NOCONN;
     }
     // Get address on which client is listening
     else if(msg.type == 112) {
-#ifdef LOGS
-        std::cout << std::endl << "Message type: " << msg.type << std::endl;
+        cts_it->call_addr.sin_addr.s_addr = msg.readInt();
+        cts_it->call_addr.sin_port = msg.readInt();
+#ifdef MSGADV
+        std::cout << std::endl <<BGREENF;
+        std::cout << "Client's IP(uint): ";
+        std::cout << MINTF << cts_it->call_addr.sin_addr.s_addr;
+        std::cout << BGREENF << "\tPort: ";
+        std::cout << MINTF << cts_it->call_addr.sin_port;
+        std::cout << std::endl << RESETF;
 #endif
-    cts_it->call_addr.sin_addr.s_addr = msg.readInt();
-    cts_it->call_addr.sin_port = msg.readInt();
+#ifdef LOGS
+        std::cout << std::endl << GOLDF;
+        std::cout << "Client is listening on: ";
+        std::cout << MINTF;
+        std::cout << cts_it->call_addr.sin_addr.s_addr << ":" << cts_it->call_addr.sin_port;
+        std::cout << std::endl << RESETF;
+#endif
     }
     else {
-#ifdef LOGS
-        std::cout << "Received: " << msg.type << std::endl;
+#ifdef MSGINFO
+        std::cout << std::endl << BGREENF;
         std::cout << "Message type is unknown" << std::endl;
         std::cout << "Message: ";
         for(char c : msg.buffer) std::cout << c;
-        std::cout << std::endl;
-        std::cout << "Message bytes: " << std::endl;
+#ifdef MSGADV
+        std::cout << std::endl << "Message bytes: " << std::endl;
         for(char c : msg.buffer) std::cout << static_cast<int>(c) << " ";
-        std::cout << std::endl;
+#endif
+        std::cout << std:: endl << RESETF;
 #endif
     }
-
     return SRV_OK;
 }
 
@@ -719,12 +941,15 @@ void server::Server::close_ct() {
     memset(svc, 0, NI_MAXSERV);
 
     if(getnameinfo((sockaddr*)&(cts_it->address), sizeof(cts_it->address), host, NI_MAXHOST, svc, NI_MAXSERV, 0)) {
-        std::cout << "Closing socket of: " << host << ":" << svc << std::endl;
+        std::cout << GOLDF << "Closing socket of: ";
+        std::cout << MINTF << host << ":" << svc << std::endl;
     }
     else {
         inet_ntop(AF_INET, &(cts_it->address).sin_addr, host, NI_MAXHOST);
-        std::cout << "Closing socket of: " << host << ":" << ntohs(cts_it->address.sin_port) << std::endl;
+        std::cout << GOLDF << "Closing socket of: ";
+        std::cout << MINTF << host << ":" << ntohs(cts_it->address.sin_port) << std::endl;
     }
+    std::cout << RESETF;
 #endif
     for(auto i : cts_it->o_files)
         for(auto j : i.second) not_owned(i.first, j.first);
@@ -739,6 +964,7 @@ void server::Server::close_ct() {
 
 server::Server::~Server() {
 #ifdef LOGS
-    std::cout << "Disconnected" << std::endl;
+    std::cout << BREDF << "Disconnected" << std::endl;
+    std::cout << RESETF;
 #endif
 }
