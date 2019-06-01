@@ -779,24 +779,29 @@ int server::Server::read_srv() {
     
             msg::Message file_info(202);
             std::vector<std::pair<server::client*, int>> lo_vector;
+            bool first = true;
             for(uint i = 0; i < no_blocks; i++) {
                 auto lo_ct = find_least_occupied(*c_file, blocks_no);
                 if(lo_ct.first == nullptr) {        // Error: There are no blocks that could be downloaded
-                    msg::Message no_block(206);
-                    no_block.writeInt(c_file->name.size());
-                    no_block.writeString(c_file->name);
-                    no_block.sendMessage(cts_it->socket);
-                    for(int block_num = c_file->blocks.size(); block_num > 0; block_num--) {
-                        block c_block = c_file->blocks[block_num-1];
-                        for(auto c_owner : c_block.owners) {
-                            delete_owner(c_block, c_owner->call_addr.sin_addr.s_addr, c_owner->call_addr.sin_port);
-                            not_owned(c_file->name, block_num-1, c_owner->call_addr.sin_addr.s_addr, c_owner->call_addr.sin_port);
+                    if(first) {
+                        msg::Message no_block(206);
+                        no_block.writeInt(c_file->name.size());
+                        no_block.writeString(c_file->name);
+                        no_block.sendMessage(cts_it->socket);
+                        for(int block_num = c_file->blocks.size(); block_num > 0; block_num--) {
+                            block c_block = c_file->blocks[block_num-1];
+                            for(auto c_owner : c_block.owners) {
+                                delete_owner(c_block, c_owner->call_addr.sin_addr.s_addr, c_owner->call_addr.sin_port);
+                                not_owned(c_file->name, block_num-1, c_owner->call_addr.sin_addr.s_addr, c_owner->call_addr.sin_port);
+                            }
+                            delete_block(*c_file, block_num-1);
                         }
-                        delete_block(*c_file, block_num-1);
+                        delete_file(*c_file);
                     }
-                    delete_file(*c_file);
+                    else break;
                 }
                 else {
+                    first = false;
                     be_downloaded(c_file->name, lo_ct.second, lo_ct.first->call_addr.sin_addr.s_addr, lo_ct.first->call_addr.sin_port);
                     blocks_no.push_back(lo_ct.second);
                     lo_ct.first->no_leeches++;
