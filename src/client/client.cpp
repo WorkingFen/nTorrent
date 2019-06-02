@@ -234,6 +234,16 @@ void Client::handleServerBadHash(msg::Message msg)
 
         std::cout <<"There is already a file with name : "<<fileName << std::endl; // i chyba tyle
  //   }
+
+    try
+    {
+        fileManager->removeFileFromSeeds(fileName);
+    }
+    catch(const std::exception& e)
+    {
+            std::cerr << font.at("REDF") << e.what() << font.at("RESETF") << '\n';
+    }
+    
 }
 void Client::handleServerNoFile(msg::Message msg)
 {
