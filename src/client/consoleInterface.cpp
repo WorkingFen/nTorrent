@@ -83,11 +83,11 @@ void Client::ConsoleInterface::handleInputConnected(Client &client, std::vector<
     else if (firstArg == "file_download")
     {
         fileDownload(client, input);
-        std::cout << font.at("SKYF") << "Download completed!" << font.at("RESETF") << std::endl;
     }
     else if (firstArg == "stop_seeding" && (state == State::seeding || state == State::both))
     {
         fileDelete(client, input);
+         std::cout << font.at("SKYF") << "File is no longer seeded!" << font.at("RESETF") << std::endl;
     }
     else if (firstArg == "stop_downloading" && (state == State::both))
     {
@@ -96,6 +96,7 @@ void Client::ConsoleInterface::handleInputConnected(Client &client, std::vector<
     else if (firstArg == "file_add")
     {
         fileAdd(client, input);
+         std::cout << font.at("SKYF") << "File adding complete!" << font.at("RESETF") << std::endl;
     }
     else if (firstArg == "seed_status")
     {

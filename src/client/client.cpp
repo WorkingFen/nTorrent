@@ -231,7 +231,7 @@ void Client::handleSeederFile(FileSocket &s, msg::Message &msg)
 
     if(fileManager->isFileComplete(fileName))
     {
-        //std::cout << "Download completed!" << std::endl;
+        std::cout << font.at("SKYF") << "Download completed!" << font.at("RESETF") << std::endl;
         fileManager->removeConfig(fileName);
         fileManager->moveSeedToOutput(fileName);
     }
