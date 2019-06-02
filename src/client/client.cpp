@@ -14,7 +14,7 @@
 using namespace msg;
 
 Client::Client(const char ipAddr[15], const int& port, const char serverIpAddr[15], const int& serverPort) : maxFd(0), mainServerSocket(-1), timeout(20), blocksPerRequest(5), blocksPending(0), 
-console(std::unique_ptr<ConsoleInterface>(new ConsoleInterface)), fileManager(std::unique_ptr<FileManager>(new FileManager))
+console(std::unique_ptr<ConsoleInterface>(new ConsoleInterface)), fileManager(std::unique_ptr<FileManager>(new FileManager)), interruptedFlag(false), runStopFlag(false), keepAliveFlag(false)
 {
     prepareSockaddrStruct(self, ipAddr, port);
     prepareSockaddrStruct(server, serverIpAddr, serverPort);
@@ -63,17 +63,17 @@ void Client::connectTo(const struct sockaddr_in &address, int isServer)
 {
     int sock = socket(AF_INET, SOCK_STREAM, 0);
 
-    if (connect(sock, (struct sockaddr *)&address, sizeof address) == -1) // TODO obsługa błędów - dodać poprawne zamknięcie
+    if (connect(sock, (struct sockaddr *)&address, sizeof address) == -1)
         throw ClientException("connect call failed");
 
-    keep_alive_flag = true;
+    keepAliveFlag = true;
     std::cout << font.at("SKYF") << "Connected to sbd" << font.at("RESETF") << std::endl;
 
     if (address.sin_addr.s_addr == server.sin_addr.s_addr)
         mainServerSocket = sock;
     else
     {
-        seederSockets.push_back(FileSocket(sock));              // TODO obsługa błędów
+        seederSockets.push_back(FileSocket(sock));
     }
 
     maxFd = std::max(maxFd, sock + 1);
@@ -93,8 +93,8 @@ void Client::signal_waiter()
     sigwait(&signal_set, &sig_number);
     if (sig_number == SIGINT)
     {
-        std::cout << font.at("REDF") << font.at("BOLDF") << "\rReceived SIGINT. Exiting..." << font.at("RESETF") << std::endl; // tylko do debugowania
-        interrupted_flag = true;
+        std::cout << font.at("REDF") << font.at("BOLDF") << "\rReceived SIGINT. Exiting..." << font.at("RESETF") << std::endl;
+        interruptedFlag = true;
     }
 }
 
@@ -129,7 +129,7 @@ void Client::getUserCommands()
     {
         char buffer[4096];
         fgets(buffer, 4096, stdin);
-        console->processCommands(buffer); // exception?????
+        console->processCommands(buffer);
     }
 }
 
@@ -161,7 +161,7 @@ void Client::handleServerFileInfo(msg::Message msg)
 
         fileManager->createConfig(*this, fileName, fileSize);
 
-        std::vector<int> indexes;//to się wydaje niepotrzebne, skoro config jest pusty
+        std::vector<int> indexes;
         try
         {
             indexes = fileManager->getIndexesFromConfig(fileName);
@@ -170,10 +170,9 @@ void Client::handleServerFileInfo(msg::Message msg)
         {
             std::cerr << font.at("REDF") << e.what() << font.at("RESETF") << '\n';
             return;
-        }//do tego momentu wydaje się niepotrzebne
+        }
         
         sendAskForBlock(mainServerSocket, fileName,blocksPerRequest, indexes); // wysyła zapytanie o blok
-        //std::cout << 123 << std::endl;
 
         console->setMessageState(MessageState::wait_for_block_info); // ustaw stan na oczekiwanie na informację skąd pobrać blok
     }
@@ -378,13 +377,13 @@ void Client::handleMessagesfromServer()
     else if (msg_manager.lastReadResult() == 0 || msg_manager.lastReadResult() == -1) //server left
     {
         std::cout << font.at("REDF") << "Lost connection with server!" << font.at("RESETF") << std::endl;
-        run_stop_flag = true;
+        runStopFlag = true;
     }
 }
 
 void Client::handleMessagesfromSeeders()
 {
-    for(auto it=seederSockets.begin(); it!=seederSockets.end();)                // pętla dla leecherSockets -> TODO pętla dla cilentSockets
+    for(auto it=seederSockets.begin(); it!=seederSockets.end();)                
     {
         if(std::time(0) - it->last_activity > timeout)
         {
@@ -402,7 +401,7 @@ void Client::handleMessagesfromSeeders()
                 msg::Message msg = msg_manager.readMsg(it->sockFd);
                 std::cout << "Received from seeder: " << msg.type << std::endl << std::endl;
 
-                if(msg.type == 111)                                // tu msg
+                if(msg.type == 111)                                
                 {
                     close(it->sockFd);
                     it = seederSockets.erase(it);
@@ -412,12 +411,10 @@ void Client::handleMessagesfromSeeders()
                 else if(msg.type == 401)
                 {
                     handleSeederFile(*it, msg);
-                    it = seederSockets.erase(it);   //blargh
+                    it = seederSockets.erase(it);   
                 }
                 else if(msg.type == 402)
                 {
-                    //ej serwer dałeś złego klienta
-
                     msg::Message(111).sendMessage(it->sockFd);
 
                     close(it->sockFd);
@@ -433,7 +430,7 @@ void Client::handleMessagesfromSeeders()
 
 void Client::handleMessagesfromLeechers()
 {
-    for(auto it=leecherSockets.begin(); it!=leecherSockets.end();)                // pętla dla leecherSockets -> TODO pętla dla cilentSockets
+    for(auto it=leecherSockets.begin(); it!=leecherSockets.end();)
     {
         if(std::time(0) - it->last_activity > timeout)
         {
@@ -453,7 +450,7 @@ void Client::handleMessagesfromLeechers()
 
                 std::cout << "Received from leecher: " << msg.type << std::endl << std::endl;
 
-                if(msg.type == 111)                                // tu msg
+                if(msg.type == 111)                                
                 {
                     close(it->sockFd);
                     it = leecherSockets.erase(it);
@@ -492,7 +489,7 @@ void Client::sendListeningAddress()
 
 void Client::shareFile(std::string directory, std::string fname)
 {
-    std::vector<std::string> hashes = hashPieces(directory + "/" + fname, pieceSize); //fileDIRname instead of clientFiles
+    std::vector<std::string> hashes = hashPieces(directory + "/" + fname, pieceSize);
 
     msg::Message share_msg(101);
 
@@ -520,7 +517,7 @@ void Client::shareFiles()
 
 void Client::sendFileInfo(int socket, std::string directory, std::string fname)
 {
-    std::vector<std::string> hashes = hashPieces(directory + "/" + fname, pieceSize); //fileDIRname instead of clientFiles
+    std::vector<std::string> hashes = hashPieces(directory + "/" + fname, pieceSize);
     int i = 0;
 
     for (std::string hash : hashes)
@@ -759,9 +756,9 @@ void Client::setFileDescrMask()
 void Client::keepAliveThread()
 {
     std::time_t keep_alive_timer = std::time(0);
-    while(!interrupted_flag && !run_stop_flag && console->getState() != State::down)
+    while(!interruptedFlag && !runStopFlag && console->getState() != State::down)
     {
-        if(keep_alive_flag)
+        if(keepAliveFlag)
         {
             if (std::time(0) - keep_alive_timer > 5) //keep_alive co 5s
             {
@@ -780,7 +777,7 @@ void Client::run()
     signal_thread = std::thread(&Client::signal_waiter, this); // Create the sigwait thread
     keep_alive = std::thread(&Client::keepAliveThread, this); // Create the sigwait thread
 
-    while (!interrupted_flag && !run_stop_flag && console->getState() != State::down)
+    while (!interruptedFlag && !runStopFlag && console->getState() != State::down)
     {
         setFileDescrMask();
 

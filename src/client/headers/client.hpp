@@ -53,7 +53,7 @@ class Client
 
         int pieceSize;
 
-        int sockFd, port, maxFd;        // listen socket; przydzielony port efemeryczny; liczba socketów pobierających/wysyłających dane (nie licząc komunikacji z serwerem)
+        int sockFd, port, maxFd;        // listen socket; przydzielony port efemeryczny
         struct sockaddr_in self, server;
         fd_set ready;
         struct timeval to;
@@ -75,11 +75,11 @@ class Client
         std::thread keep_alive;
            
         sigset_t signal_set;					// do ustawienia sigmask
-        bool interrupted_flag = false;			// sygnalizuje użycie Ctrl+C
-        bool run_stop_flag = false;             // koniec pętli run
-        bool keep_alive_flag = false;
+        bool interruptedFlag;			        // sygnalizuje użycie Ctrl+C
+        bool runStopFlag;                       // koniec pętli run
+        bool keepAliveFlag;
 
-        void signal_waiter();					// obsługa siginta na fredach
+        void signal_waiter();					// obsługa siginta na threadach
         void keepAliveThread();
         
         void setSigmask();
@@ -115,7 +115,7 @@ class Client
 
         const struct sockaddr_in& getServer() const;
 
-        void shareFile(std::string directory, std::string fname);   //to wszystko raczej prywatne, a nie publiczne
+        void shareFile(std::string directory, std::string fname);
         void shareFiles();
         void sendListeningAddress();
         void sendFileInfo(int socket, std::string directory, std::string filename);
@@ -133,7 +133,7 @@ class Client
 
         void sendBadBlockHash(int socket, std::string fileName, int blockIndex, int seederAddress, int seederPort);
 
-        void run();                                                   // pętla z selectem
+        void run();                                               
 
 };
 
