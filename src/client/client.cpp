@@ -101,6 +101,7 @@ void Client::setSigmask()
 {
     sigemptyset(&signal_set);
     sigaddset(&signal_set, SIGINT);
+    sigaddset(&signal_set, SIGPIPE);
     int status = pthread_sigmask(SIG_BLOCK, &signal_set, NULL);
     if (status != 0)
         std::cerr << font.at("REDF") << "Setting signal mask failed" << font.at("RESETF") << std::endl;
