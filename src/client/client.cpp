@@ -210,6 +210,81 @@ void Client::handleServerBlockInfo(msg::Message msg)
         console->setMessageState(MessageState::none);}
 }
 
+void Client::handleServerBadHash(msg::Message msg)
+{
+    int fileNameLength = msg.readInt();
+
+    std::string fileName = msg.readString(fileNameLength);
+
+    int blockIndex = msg.readInt();
+
+    bool flag = false;
+    (void) flag;
+    (void) blockIndex;
+    try
+    {
+        flag = fileManager->isFileComplete(fileManager->getSeedsDirName()+"/"+fileName);
+    }
+    catch(const std::exception& e)
+    {
+        flag = false;
+    }
+
+ //   if(flag)    
+ //   {
+
+        std::cout <<"There is already a file with name : "<<fileName << std::endl; // i chyba tyle
+ //   }
+}
+void Client::handleServerNoFile(msg::Message msg)
+{
+    int fileNameLength = msg.readInt();
+    std::string fileName = msg.readString(fileNameLength); 
+
+    std::cout <<"No file  \""<<fileName<<"\" available" << std::endl; // i chyba tyle
+       
+}
+void Client::handleServerNoBlock(msg::Message msg)
+{
+    (void)msg;
+    // nie powinno zajść
+}
+
+void Client::handleServerNoBlocksAvaliable(msg::Message msg)
+{
+    // trzeba znowu wysłać żądanie o bloki
+    int fileNameLength = msg.readInt();
+    std::string fileName = msg.readString(fileNameLength); 
+    int blockIndex = msg.readInt();
+    (void) fileNameLength;
+    (void) fileName;
+    (void) blockIndex;
+
+    if (console->getMessageState() == MessageState::wait_for_block_info) // jeśli czekaliśmy na to info
+    {
+        std::vector<int> indexes;//to się wydaje niepotrzebne, skoro config jest pusty
+        try
+        {
+            indexes = fileManager->getIndexesFromConfig(fileName);
+        }
+        catch (const std::exception &e)
+        {
+            std::cerr << font.at("REDF") << e.what() << font.at("RESETF") << '\n';
+            return;
+        }
+        // timeout jakiś żeby nie wołać co sekundę?
+        // czyli flaga też podobna
+        sendAskForBlock(mainServerSocket, fileName,blocksPerRequest, indexes); // wysyła zapytanie o blok
+
+    }
+}
+
+void Client::handleServerNoFiles(msg::Message msg)
+{
+    (void)msg;
+    std::cout<<"No files available"<<std::endl;   
+}
+
 void Client::handleSeederFile(FileSocket &s, msg::Message &msg)
 {
     blocksPending --;
@@ -278,6 +353,26 @@ void Client::handleMessagesfromServer()
         else if (msg.type == 202) // serwer wysłał info o bloku do pobrania
         {
             handleServerBlockInfo(msg);
+        }
+        else if (msg.type == 203) // info o przesłanych błędnych haszach
+        {
+            handleServerBadHash(msg);
+        }
+        else if (msg.type == 204) // info o braku żądanego pliku
+        {
+            handleServerNoFile(msg);
+        }
+        else if (msg.type == 205) // info o braku żądanego bloku
+        {
+            handleServerNoBlock(msg);
+        }
+        else if (msg.type == 206) // info o braku wolnych bloków do pobrania
+        {
+            handleServerNoBlocksAvaliable(msg);
+        }
+        else if (msg.type == 207) // info o braku plików
+        {
+            handleServerNoFiles(msg);
         }
     }
     else if (msg_manager.lastReadResult() == 0 || msg_manager.lastReadResult() == -1) //server left
