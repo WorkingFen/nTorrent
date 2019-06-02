@@ -13,7 +13,8 @@
 
 using namespace msg;
 
-Client::Client(const char ipAddr[15], const int& port, const char serverIpAddr[15], const int& serverPort) : maxFd(0), blocksPending(0), console(std::unique_ptr<ConsoleInterface>(new ConsoleInterface)), fileManager(std::unique_ptr<FileManager>(new FileManager))
+Client::Client(const char ipAddr[15], const int& port, const char serverIpAddr[15], const int& serverPort) : maxFd(0), mainServerSocket(-1), timeout(20), blocksPerRequest(5), blocksPending(0), 
+console(std::unique_ptr<ConsoleInterface>(new ConsoleInterface)), fileManager(std::unique_ptr<FileManager>(new FileManager))
 {
     prepareSockaddrStruct(self, ipAddr, port);
     prepareSockaddrStruct(server, serverIpAddr, serverPort);

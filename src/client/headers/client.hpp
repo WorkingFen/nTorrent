@@ -36,33 +36,36 @@ class Client
         class ConsoleInterface;
         class FileManager;
 
-        int pieceSize = 400000;
+        struct FileSocket
+        {
+            int sockFd;
+
+            std::string filename;
+            int blockIndex;
+
+            std::string hash;
+            std::time_t last_activity;
+            struct sockaddr_in sender;
+
+            FileSocket(): blockIndex(-1), last_activity(std::time(0)) {}
+            FileSocket(int i): sockFd(i), blockIndex(-1), last_activity(std::time(0)) {}
+        };
+
+        int pieceSize;
 
         int sockFd, port, maxFd;        // listen socket; przydzielony port efemeryczny; liczba socketów pobierających/wysyłających dane (nie licząc komunikacji z serwerem)
         struct sockaddr_in self, server;
         fd_set ready;
         struct timeval to;
 
-        int mainServerSocket = -1;
-        struct FileSocket
-        {
-            int sockFd;
+        int mainServerSocket;
 
-            std::string filename = std::string();
-            int blockIndex = -1;
-
-            std::string hash;
-            std::time_t last_activity = std::time(0);
-
-            FileSocket() {}
-            FileSocket(int i): sockFd(i) {}
-        };
 
         std::list<FileSocket> seederSockets;                             // lista z socketami pełniącymi role leechów/peerów
-        std::list<FileSocket> leecherSockets;                             // lista z socketami pełniącymi role seederów/peerów  
-        std::time_t timeout = 20; 
-        int blocksPerRequest = 5;                                       // liczba bloków o jakie prosimy serwer 
-        int blocksPending;                                            // liczba bloków którą serwer odesłał, dekrementowana po każdym pobraniu bloku. Po zdekrementowaniu do 0, wysyłane jest kolejne zapytanie o bloki do serwera
+        std::list<FileSocket> leecherSockets;                            // lista z socketami pełniącymi role seederów/peerów  
+        std::time_t timeout; 
+        int blocksPerRequest;                                           // liczba bloków o jakie prosimy serwer 
+        int blocksPending;                                              // liczba bloków którą serwer odesłał, dekrementowana po każdym pobraniu bloku. Po zdekrementowaniu do 0, wysyłane jest kolejne zapytanie o bloki do serwera
 
         msg::MessageManager msg_manager;
         std::unique_ptr<ConsoleInterface> console;
