@@ -29,10 +29,11 @@ void server::Server::show_ct_ofiles() {
         else std::cout << "]";
         std::cout << std::endl;
     }
-    std::cout << GOLDF;
+    std::cout << RESETF;
 }
 
 void server::Server::show_ct_dfiles() {
+    std::cout << std::endl << GOLDF;
     std::cout << "Downloading files: " << std::endl;
     std::cout << ORANGEF << "###" << std::endl;
     for(auto d_file : cts_it->d_files) {
@@ -313,7 +314,7 @@ void server::Server::set_leeches(std::pair<server::client*, int>& lo_ct, std::st
 // Set leeches of client's downloaded file with ip:port
 void server::Server::set_leeches(std::string name, int no_block, uint ip, int port) {
     file* e_file = get_file(name);
-    client* e_owner;
+    client* e_owner = nullptr;
     if(e_file == nullptr) return;
     else {
         block* e_block = get_block(*e_file, no_block);
@@ -324,6 +325,7 @@ void server::Server::set_leeches(std::string name, int no_block, uint ip, int po
                     e_owner = *c_owner;
                     break;
                 }
+            if(e_owner == nullptr) return;
         }
     }
 
