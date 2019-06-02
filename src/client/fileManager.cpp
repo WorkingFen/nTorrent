@@ -356,6 +356,12 @@ void Client::FileManager::removeConfig(const std::string& fileName)
     remove((path).c_str());
 }
 
+void Client::FileManager::removeFileFromSeeds(const std::string& fileName)
+{
+    const std::string path = seedsDirName + "/" + fileName;
+    remove((path).c_str());
+}
+
 std::string Client::FileManager::getSeedsDirName()
 {
     return seedsDirName;
