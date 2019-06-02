@@ -609,6 +609,7 @@ int server::Server::read_srv() {
                 bad_hash.writeString(c_file->name);
                 bad_hash.writeInt(no_block);
                 bad_hash.sendMessage(cts_it->socket);
+                break;
             }             
             else {
                 add_owner(*c_block, &*cts_it);
@@ -622,9 +623,9 @@ int server::Server::read_srv() {
         for(auto c_block : c_file->blocks)
             std::cout << "Piece hash: " << c_block.hash << std::endl;
         std::cout << RESETF;
-        #endif
         #ifdef OWNEDFILES
         show_srvfiles(*c_file);
+        #endif
         #endif
     }
     // List all files
@@ -640,17 +641,20 @@ int server::Server::read_srv() {
                 std::cout << std::endl << BGREENF;
                 std::cout << "File name: " << c_file.first << "\t";
                 std::cout << "Size: " << c_file.second.size;
-                std::cout << std::endl << RESETF;
+                std::cout << RESETF;
                 #ifdef OWNEDFILES
                 show_srvfiles(c_file.second);
-                show_ct_ofiles();
                 #endif
+                std::cout << std::endl;
                 #endif
             }
         else {                                      // Error: There are no files
             msg::Message file_list(207);
             file_list.sendMessage(cts_it->socket);
-        }            
+        } 
+        #ifdef OWNEDFILES
+        show_ct_ofiles();
+        #endif           
     }
     // Delete client's file
     else if(msg.type == 103) {
@@ -916,7 +920,7 @@ int server::Server::read_srv() {
         std::cout << std::endl << RESETF;
         #endif
         #ifdef LOGS
-        std::cout << std::endl << GOLDF;
+        std::cout << GOLDF;
         std::cout << "Client is listening on: ";
         std::cout << MINTF;
         std::cout << cts_it->call_addr.sin_addr.s_addr << ":" << cts_it->call_addr.sin_port;
@@ -967,12 +971,15 @@ void server::Server::close_ct() {
                 #ifdef FILES
                 std::cout << std::endl << ORANGEF;
                 std::cout << "File " << name << " has been deleted";
-                std::cout << std::endl << RESETF;
+                std::cout << RESETF;
                 #endif
             }
             not_owned(name, no_block);
         }
     }
+    #ifdef FILES
+    std::cout << std::endl;
+    #endif
     
     for(auto i : cts_it->d_files)
         for(auto j : i.second) set_leeches(i.first, j.first, j.second.sin_addr.s_addr, j.second.sin_port);
