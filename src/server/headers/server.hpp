@@ -28,6 +28,7 @@
 #define COLORCONSOLE
 #define FILES
 #define OWNED
+#define MSGINFO
 
 #ifdef _DEBUG
     #ifndef LOGS 
