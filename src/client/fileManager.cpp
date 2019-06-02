@@ -321,8 +321,7 @@ void Client::FileManager::copyFile(const std::string& filePath, const std::strin
 {
     if(doesFileExist(newFileName, false))
     {
-        std::cerr << newFileName << " already exists in this location!" << std::endl;
-        return;
+        throw FileManagerException (newFileName + " already exists in this location!");
     }
 
     std::ifstream oldFile;
@@ -338,8 +337,7 @@ void Client::FileManager::copyFile(const std::string& filePath, const std::strin
 
     if(!oldFile.is_open())
     {
-        std::cerr << filePath << " could not be found" << std::endl;
-        return;
+        throw FileManagerException (filePath + " could not be found!");
     }
 
     std::ofstream newFile((seedsDirName + "/" + newFileName), std::ios::app);

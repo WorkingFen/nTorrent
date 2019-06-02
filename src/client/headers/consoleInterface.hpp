@@ -33,8 +33,8 @@ class Client::ConsoleInterface
     std::vector<char> buffer;
     std::queue<std::string> commandQueue;
 
-    void handleInputUp(Client& client, std::vector<std::string> input);
-    void handleInputConnected(Client& client, std::vector<std::string> input);
+    void handleInputUp(Client& client, const std::vector<std::string> input);
+    void handleInputConnected(Client& client, const std::vector<std::string> input);
 
     void printHelp();
     void fileDownload(Client &client, const std::vector<std::string> &input);
@@ -46,12 +46,9 @@ class Client::ConsoleInterface
     ~ConsoleInterface();
 
     void processCommands(const char* buf);
-    std::vector<std::string> splitBySpace(const std::string &input);       // pewnie powinno być w jakimś utils.h
+    std::vector<std::string> splitBySpace(const std::string &input);
     void handleInput(Client& client);
     void printIncorrectCommand();
-
-    void stopSeeding();
-    void stopLeeching();
 
     State getState();
     void setState(State state);

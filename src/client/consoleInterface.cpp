@@ -11,9 +11,9 @@ Client::ConsoleInterface::ConsoleInterface() : state(State::up), messageState(Me
 
 Client::ConsoleInterface::~ConsoleInterface() {}
 
-void Client::ConsoleInterface::handleInputUp(Client &client, std::vector<std::string> input)
+void Client::ConsoleInterface::handleInputUp(Client &client, const std::vector<std::string> input)
 {
-    std::string firstArg = input[0];
+    const std::string firstArg = input[0];
 
     if (firstArg == "help")
     {
@@ -44,17 +44,10 @@ void Client::ConsoleInterface::handleInputUp(Client &client, std::vector<std::st
         cout << font.at("REDF") << "Nieprawidlowa komenda! Wpisz 'help', aby zobaczyc liste komend." << font.at("RESETF") << endl;
     }
 }
-/*
-    1. Wyświetl zawartość katalogu
-    2. Pobierz plik
-    3. Uaktualnij stan plików
-    4. Zakończ pobierać plik
-    5. Zakończ udostępniać plik
 
-*/
-void Client::ConsoleInterface::handleInputConnected(Client &client, std::vector<std::string> input)
+void Client::ConsoleInterface::handleInputConnected(Client &client, const std::vector<std::string> input)
 {
-    std::string firstArg = input[0];
+    const std::string firstArg = input[0];
 
     if (firstArg == "help")
     {
@@ -77,7 +70,6 @@ void Client::ConsoleInterface::handleInputConnected(Client &client, std::vector<
     }
     else if (firstArg == "file_list")
     {
-        //TODODO
         client.listServerFiles();
     }
     else if (firstArg == "file_download")
@@ -87,16 +79,12 @@ void Client::ConsoleInterface::handleInputConnected(Client &client, std::vector<
     else if (firstArg == "stop_seeding" && (state == State::seeding || state == State::both))
     {
         fileDelete(client, input);
-         std::cout << font.at("SKYF") << "File is no longer seeded!" << font.at("RESETF") << std::endl;
-    }
-    else if (firstArg == "stop_downloading" && (state == State::both))
-    {
-        fileDelete(client, input);
+        std::cout << font.at("SKYF") << "File is no longer seeded!" << font.at("RESETF") << std::endl;
     }
     else if (firstArg == "file_add")
     {
         fileAdd(client, input);
-         std::cout << font.at("SKYF") << "File adding complete!" << font.at("RESETF") << std::endl;
+        std::cout << font.at("SKYF") << "File adding complete!" << font.at("RESETF") << std::endl;
     }
     else if (firstArg == "seed_status")
     {
@@ -143,7 +131,6 @@ void Client::ConsoleInterface::printHelp()
     if (state == State::seeding || state == State::both)
     {
         cout << "[*] stop_seeding <nazwa_pliku>   - przestań udostępniać plik" << endl;
-        cout << "[*] stop_downloading <nazwa_pliku>   - przestań pobierać i udostępniać plik" << endl;
     }
 
     cout << "[*] quit                        - wylacz program" << font.at("RESETF") << endl;
@@ -256,16 +243,6 @@ void Client::ConsoleInterface::handleInput(Client &client)
         else if (state == State::connected || state == State::seeding || state == State::leeching || state == State::both)
             handleInputConnected(client, tokens); // prawie takie same
     }
-}
-
-void Client::ConsoleInterface::stopSeeding()
-{
-    //TODO
-}
-
-void Client::ConsoleInterface::stopLeeching()
-{
-    //TODO
 }
 
 State Client::ConsoleInterface::getState()
