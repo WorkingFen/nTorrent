@@ -210,6 +210,68 @@ void Client::handleServerBlockInfo(msg::Message msg)
         console->setMessageState(MessageState::none);}
 }
 
+void Client::handleServerBadHash(msg::Message msg)
+{
+    int fileNameLength = msg.readInt();
+
+    std::string fileName = msg.readString(fileNameLength);
+
+    int blockIndex = msg.readInt();
+
+    bool flag = false;
+    (void) blockIndex;
+    try
+    {
+        flag = fileManager->isFileComplete(fileManager->getSeedsDirName()+"/"+fileName);
+    }
+    catch(const std::exception& e)
+    {
+        flag = false;
+    }
+    
+    // jeśli mamy cały plik, to znaczy, że chcieliśmy udostępnić nowy plik na serwer, 
+    // ale na serwerze istnieje już plik o tej samej nazwie
+    // ALBO pobraliśmy ostatni blok pliku i myślimy że wszystko jest ok
+    // więc go złożyliśmy, usunęliśmy config, a serwer odsyła ze jest zły blok
+    // ale to nie powinno zajść
+ //   if(flag)    
+ //   {
+
+        std::cout <<"There is already a file with name : "<<fileName << std::endl; // i chyba tyle
+ //   }
+}
+void Client::handleServerNoFile(msg::Message msg)
+{
+    int fileNameLength = msg.readInt();
+    std::string fileName = msg.readString(fileNameLength); 
+
+    std::cout <<"No file  \""<<fileName<<"\" available" << std::endl; // i chyba tyle
+       
+}
+void Client::handleServerNoBlock(msg::Message msg)
+{
+    (void)msg;
+    // nie powinno zajść
+}
+
+void Client::handleServerNoBlocksAvaliable(msg::Message msg)
+{
+    // trzeba znowu wysłać żądanie o bloki
+    int fileNameLength = msg.readInt();
+    std::string fileName = msg.readString(fileNameLength); 
+    int blockIndex = msg.readInt();
+    (void) fileNameLength;
+    (void) fileName;
+    (void) blockIndex;
+    // skąd wiedzieć, że żądaliśmy? co jak serwer nam to z dupy wyśle?
+}
+
+void Client::handleServerNoFiles(msg::Message msg)
+{
+    (void)msg;
+    std::cout<<"No files available"<<std::endl;   
+}
+
 void Client::handleSeederFile(FileSocket &s, msg::Message &msg)
 {
     blocksPending --;
@@ -278,6 +340,26 @@ void Client::handleMessagesfromServer()
         else if (msg.type == 202) // serwer wysłał info o bloku do pobrania
         {
             handleServerBlockInfo(msg);
+        }
+        else if (msg.type == 203) // info o przesłanych błędnych haszach
+        {
+            handleServerBadHash(msg);
+        }
+        else if (msg.type == 204) // info o braku żądanego pliku
+        {
+            handleServerNoFile(msg);
+        }
+        else if (msg.type == 205) // info o braku żądanego bloku
+        {
+            handleServerNoBlock(msg);
+        }
+        else if (msg.type == 206) // info o braku wolnych bloków do pobrania
+        {
+            handleServerNoBlocksAvaliable(msg);
+        }
+        else if (msg.type == 207) // info o braku plików
+        {
+            handleServerNoFiles(msg);
         }
     }
     else if (msg_manager.lastReadResult() == 0 || msg_manager.lastReadResult() == -1) //server left

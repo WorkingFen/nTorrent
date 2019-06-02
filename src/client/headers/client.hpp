@@ -92,7 +92,12 @@ class Client
 
         void handleServerFileInfo(msg::Message msg);        // handler dla 201
         void handleServerBlockInfo(msg::Message msg);       // handler dla 202
-
+        void handleServerBadHash(msg::Message msg);         // 203
+        void handleServerNoFile(msg::Message msg);          // 204  
+        void handleServerNoBlock(msg::Message msg);         // 205
+        void handleServerNoBlocksAvaliable(msg::Message msg); // 206
+        void handleServerNoFiles(msg::Message msg);         // 207
+        
         void handleSeederFile(FileSocket &s, msg::Message &msg);
 
         void getUserCommands();
