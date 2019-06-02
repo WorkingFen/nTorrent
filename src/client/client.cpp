@@ -263,7 +263,24 @@ void Client::handleServerNoBlocksAvaliable(msg::Message msg)
     (void) fileNameLength;
     (void) fileName;
     (void) blockIndex;
-    // skąd wiedzieć, że żądaliśmy? co jak serwer nam to z dupy wyśle?
+
+    if (console->getMessageState() == MessageState::wait_for_block_info) // jeśli czekaliśmy na to info
+    {
+        std::vector<int> indexes;//to się wydaje niepotrzebne, skoro config jest pusty
+        try
+        {
+            indexes = fileManager->getIndexesFromConfig(fileName);
+        }
+        catch (const std::exception &e)
+        {
+            std::cerr << font.at("REDF") << e.what() << font.at("RESETF") << '\n';
+            return;
+        }
+        // timeout jakiś żeby nie wołać co sekundę?
+        // czyli flaga też podobna
+        sendAskForBlock(mainServerSocket, fileName,blocksPerRequest, indexes); // wysyła zapytanie o blok
+
+    }
 }
 
 void Client::handleServerNoFiles(msg::Message msg)
