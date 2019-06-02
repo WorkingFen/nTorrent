@@ -219,6 +219,7 @@ void Client::handleServerBadHash(msg::Message msg)
     int blockIndex = msg.readInt();
 
     bool flag = false;
+    (void) flag;
     (void) blockIndex;
     try
     {
@@ -228,12 +229,7 @@ void Client::handleServerBadHash(msg::Message msg)
     {
         flag = false;
     }
-    
-    // jeśli mamy cały plik, to znaczy, że chcieliśmy udostępnić nowy plik na serwer, 
-    // ale na serwerze istnieje już plik o tej samej nazwie
-    // ALBO pobraliśmy ostatni blok pliku i myślimy że wszystko jest ok
-    // więc go złożyliśmy, usunęliśmy config, a serwer odsyła ze jest zły blok
-    // ale to nie powinno zajść
+
  //   if(flag)    
  //   {
 
