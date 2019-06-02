@@ -11,16 +11,31 @@
 #include <signal.h>
 #include <thread>
 #include <memory>
+#include <unordered_map>
 #include "../../message/message.hpp"
 
 #define SERVER 1
 #define CLIENT 0
+
+const std::unordered_map<std::string, std::string> font
+{
+    {"BOLDF", "\u001B[1m"},                       // Used for important informations
+    {"REDF", "\u001B[31m"},                       // Used for errors or SIGINT program execution
+    {"BGREENF", "\u001B[38;5;2m"},                // Used for message informations
+    {"SKYF", "\u001B[38;5;39m"},                  // Used for client informations
+    {"MINTF", "\u001B[38;5;42m"},                 // Used for ip addresses and ports
+    {"GOLDF", "\u001B[38;5;178m"},                // Used for client informations
+    {"BREDF", "\u001B[38;5;196m"},                // Used for warnings or disconnection
+    {"ORANGEF", "\u001B[38;5;209m"},              // Used for file informations
+    {"RESETF", "\u001B[0m"}                       // Reset console font
+};
 
 class Client
 {
     private:
         class ConsoleInterface;
         class FileManager;
+
         int pieceSize = 400000;
 
         int sockFd, port, maxFd;        // listen socket; przydzielony port efemeryczny; liczba socketów pobierających/wysyłających dane (nie licząc komunikacji z serwerem)

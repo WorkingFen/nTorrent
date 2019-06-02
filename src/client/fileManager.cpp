@@ -95,7 +95,7 @@ void Client::FileManager::printOutputFolderContent()
 
     struct dirent *x;
     int i=1;
-    std::cout << std::endl << "ZAWARTOSC KATALOGU OUTPUT:" << std::endl; 
+    std::cout << font.at("ORANGEF") << std::endl << "ZAWARTOSC KATALOGU OUTPUT:" << std::endl; 
     while( (x=readdir(fileDir)) != NULL )
     {
         const std::string name = x->d_name;
@@ -105,7 +105,7 @@ void Client::FileManager::printOutputFolderContent()
             i++;
         }
     }
-    std::cout << std::endl;
+    std::cout << font.at("RESETF") << std::endl;
     closedir(fileDir);
 }
 
@@ -118,7 +118,7 @@ void Client::FileManager::printSeedsFolderContent()
 
     struct dirent *x;
     int i=1;
-    std::cout << std::endl << "ZAWARTOSC KATALOGU:" << std::endl; 
+    std::cout << font.at("ORANGEF") << std::endl << "ZAWARTOSC KATALOGU:" << std::endl; 
     while( (x=readdir(fileDir)) != NULL )
     {
         const std::string name = x->d_name;
@@ -132,7 +132,7 @@ void Client::FileManager::printSeedsFolderContent()
             i++;
         }
     }
-    std::cout << std::endl;
+    std::cout << font.at("RESETF") << std::endl;
     closedir(fileDir);
 }
 

@@ -33,7 +33,7 @@ void Client::ConsoleInterface::handleInputUp(Client &client, std::vector<std::st
     }
     else if (firstArg == "disconnect" || firstArg == "file_list" || firstArg == "file_download" || firstArg == "seed_status")
     {
-        cout << "Nie jestes polaczony z serwerem." << endl;
+        cout << font.at("REDF") << "You are not connected to server yet." << font.at("RESETF") << endl;
     }
     else if (firstArg == "quit")
     {
@@ -41,7 +41,7 @@ void Client::ConsoleInterface::handleInputUp(Client &client, std::vector<std::st
     }
     else
     {
-        cout << "Nieprawidlowa komenda! Wpisz 'help', aby zobaczyc liste komend." << endl;
+        cout << font.at("REDF") << "Nieprawidlowa komenda! Wpisz 'help', aby zobaczyc liste komend." << font.at("RESETF") << endl;
     }
 }
 /*
@@ -62,14 +62,14 @@ void Client::ConsoleInterface::handleInputConnected(Client &client, std::vector<
     }
     else if (firstArg == "connect")
     {
-        cout << "Jestes juz polaczony!" << endl;
+        cout << font.at("REDF") << "You are already connected!" << font.at("RESETF") <<  endl;
     }
     else if (firstArg == "disconnect")
     {
         client.disconnect();
         state = State::up;
         messageState = MessageState::none;
-        cout << "Jestes odlaczony!" << endl;
+        cout << font.at("SKYF") << "Disconnected!" << font.at("RESETF") << endl;
     }
     else if (firstArg == "ls")
     {
@@ -83,6 +83,7 @@ void Client::ConsoleInterface::handleInputConnected(Client &client, std::vector<
     else if (firstArg == "file_download")
     {
         fileDownload(client, input);
+        std::cout << font.at("SKYF") << "Download completed!" << font.at("RESETF") << std::endl;
     }
     else if (firstArg == "stop_seeding" && (state == State::seeding || state == State::both))
     {
@@ -102,12 +103,12 @@ void Client::ConsoleInterface::handleInputConnected(Client &client, std::vector<
     }
     else if(firstArg == "state")
     {
-        if(state == State::leeching)std::cout<<"leeching"<<std::endl;
-        else if(state == State::seeding)std::cout<<"seeding"<<std::endl;
-        else if(state == State::both)std::cout<<"both"<<std::endl;
-        else if(state == State::connected)std::cout<<"connected"<<std::endl;
-        else if(state == State::up)std::cout<<"up"<<std::endl;
-        else if(state == State::down)std::cout<<"down"<<std::endl;
+        if(state == State::leeching)std::cout<< font.at("SKYF")<<"leeching"<< font.at("RESETF")<<std::endl;
+        else if(state == State::seeding)std::cout<< font.at("SKYF")<<"seeding"<< font.at("RESETF")<<std::endl;
+        else if(state == State::both)std::cout<< font.at("SKYF")<<"both"<< font.at("RESETF")<<std::endl;
+        else if(state == State::connected)std::cout<< font.at("SKYF")<<"connected"<< font.at("RESETF")<<std::endl;
+        else if(state == State::up)std::cout<< font.at("SKYF")<<"up"<< font.at("RESETF")<<std::endl;
+        else if(state == State::down)std::cout<< font.at("SKYF")<<"down"<< font.at("RESETF")<<std::endl;
     }
     else if (firstArg == "quit")
     {
@@ -121,7 +122,7 @@ void Client::ConsoleInterface::handleInputConnected(Client &client, std::vector<
 
 void Client::ConsoleInterface::printHelp()
 {
-    cout << "------Lista komend:------" << endl
+    cout << font.at("SKYF") << "------Lista komend:------" << endl
          << "[*] help                        - wypisz liste dostepnych komend" << endl
          << "[*] ls                          - pokaz zawartosc katalogu \"output\"" << endl;
 
@@ -144,7 +145,7 @@ void Client::ConsoleInterface::printHelp()
         cout << "[*] stop_downloading <nazwa_pliku>   - przestań pobierać i udostępniać plik" << endl;
     }
 
-    cout << "[*] quit                        - wylacz program" << endl;
+    cout << "[*] quit                        - wylacz program" << font.at("RESETF") << endl;
 }
 
 void Client::ConsoleInterface::fileDownload(Client &client, const std::vector<std::string> &input)
@@ -205,7 +206,7 @@ void Client::ConsoleInterface::fileAdd(Client &client, const std::vector<std::st
 
 void Client::ConsoleInterface::printIncorrectCommand()
 {
-    cout << "Nieprawidlowa komenda! Wpisz 'help', aby zobaczyc liste komend." << endl;
+    cout << font.at("REDF") << "Nieprawidlowa komenda! Wpisz 'help', aby zobaczyc liste komend." << font.at("RESETF") << endl;
 }
 
 void Client::ConsoleInterface::processCommands(const char *buf)

@@ -25,7 +25,7 @@ Client::Client(const char ipAddr[15], const int& port, const char serverIpAddr[1
 
     int enable = 1;
     if (setsockopt(sockFd, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(int)) < 0)
-        std::cerr << "setting SO_REUSEADDR option on socket " << sockFd << " failed" << std::endl;
+        std::cerr << font.at("REDF") << "setting SO_REUSEADDR option on socket " << sockFd << " failed" << font.at("RESETF") << std::endl;
 
     if (bind(sockFd, (struct sockaddr *)&self, sizeof self) == -1)
         throw ClientException("bind call failed");
@@ -49,13 +49,13 @@ Client::Client(const char ipAddr[15], const int& port, const char serverIpAddr[1
     {
         this->port = port;
     }
-    std::cout << "Successfully connected and listening at: " << ipAddr << ":" << this->port << std::endl;
+    std::cout << font.at("SKYF") << "Successfully connected and listening at: " << font.at("MINTF") << ipAddr << ":" << this->port << font.at("RESETF") << std::endl;
     fileManager->removeFragmentedFiles();
 }
 
 Client::~Client()
 {
-    std::cout << "Disconnected" << std::endl;
+    std::cout << font.at("REDF") << "Disconnected" << font.at("RESETF") << std::endl;
 }
 
 void Client::connectTo(const struct sockaddr_in &address, int isServer)
@@ -66,7 +66,7 @@ void Client::connectTo(const struct sockaddr_in &address, int isServer)
         throw ClientException("connect call failed");
 
     keep_alive_flag = true;
-    std::cout << "Connected to sbd" << std::endl;
+    std::cout << font.at("SKYF") << "Connected to sbd" << font.at("RESETF") << std::endl;
 
     if (address.sin_addr.s_addr == server.sin_addr.s_addr)
         mainServerSocket = sock;
@@ -92,7 +92,7 @@ void Client::signal_waiter()
     sigwait(&signal_set, &sig_number);
     if (sig_number == SIGINT)
     {
-        std::cout << "\rReceived SIGINT. Exiting..." << std::endl; // tylko do debugowania
+        std::cout << font.at("REDF") << font.at("BOLDF") << "\rReceived SIGINT. Exiting..." << font.at("RESETF") << std::endl; // tylko do debugowania
         interrupted_flag = true;
     }
 }
@@ -103,7 +103,7 @@ void Client::setSigmask()
     sigaddset(&signal_set, SIGINT);
     int status = pthread_sigmask(SIG_BLOCK, &signal_set, NULL);
     if (status != 0)
-        std::cerr << "Setting signal mask failed" << std::endl;
+        std::cerr << font.at("REDF") << "Setting signal mask failed" << font.at("RESETF") << std::endl;
 }
 
 void Client::prepareSockaddrStruct(struct sockaddr_in &x, const char ipAddr[15], const int &port)
@@ -139,7 +139,7 @@ void Client::handleCommands()
     }
     catch (std::exception &e)
     {
-        std::cerr << e.what() << std::endl;
+        std::cerr << font.at("REDF") << e.what() << font.at("RESETF") << std::endl;
     }
 }
 
@@ -166,7 +166,7 @@ void Client::handleServerFileInfo(msg::Message msg)
         }
         catch (const std::exception &e)
         {
-            std::cerr << e.what() << '\n';
+            std::cerr << font.at("REDF") << e.what() << font.at("RESETF") << '\n';
             return;
         }//do tego momentu wydaje się niepotrzebne
         
@@ -215,7 +215,7 @@ void Client::handleSeederFile(FileSocket &s, msg::Message &msg)
     std::string hash = hashOnePiece(msg.buffer);
     if(hash != s.hash)
     {
-        std::cout << "bad hash:\n" << hash << std::endl << s.hash << std::endl;
+        std::cout << font.at("REDF") << "bad hash:\n" << hash << std::endl << s.hash << font.at("RESETF") << std::endl;
         //sendBadBlockHash(mainServerSocket, s.filename, s.);
     }
     else
@@ -231,7 +231,7 @@ void Client::handleSeederFile(FileSocket &s, msg::Message &msg)
 
     if(fileManager->isFileComplete(fileName))
     {
-        std::cout << "Download completed!" << std::endl;
+        //std::cout << "Download completed!" << std::endl;
         fileManager->removeConfig(fileName);
         fileManager->moveSeedToOutput(fileName);
     }
@@ -265,7 +265,7 @@ void Client::handleMessagesfromServer()
         else if (msg.type == 210)
         {
             pieceSize = msg.readInt();
-            std::cout << "Piece size set to " << pieceSize << std::endl;
+            std::cout << font.at("SKYF") << "Piece size set to " << pieceSize << font.at("RESETF") << std::endl;
 
             shareFiles();
         }
@@ -280,7 +280,7 @@ void Client::handleMessagesfromServer()
     }
     else if (msg_manager.lastReadResult() == 0 || msg_manager.lastReadResult() == -1) //server left
     {
-        std::cout << "Lost connection with server!" << std::endl;
+        std::cout << font.at("REDF") << "Lost connection with server!" << font.at("RESETF") << std::endl;
         run_stop_flag = true;
     }
 }
@@ -597,7 +597,7 @@ void Client::disconnect()
         msg::Message(111).sendMessage(mainServerSocket);
         result = close(mainServerSocket);
         if (result == -1)
-            std::cerr << "Closing " << mainServerSocket << " socket failed" << std::endl;
+            std::cerr << font.at("REDF") << "Closing " << mainServerSocket << " socket failed" << font.at("RESETF") << std::endl;
         mainServerSocket = -1;
     }
 
@@ -611,7 +611,7 @@ void Client::disconnect()
 
         if(result == -1)
         {
-            std::cerr<<"Closing "<<it->sockFd<<" socket failed"<<std::endl;
+            std::cerr << font.at("REDF") <<"Closing "<<it->sockFd<<" socket failed" << font.at("RESETF") <<std::endl;
             continue;
         }
     }
@@ -625,10 +625,10 @@ void Client::disconnect()
         it = leecherSockets.erase(it);
 
         if(result == -1){
-            std::cerr<<"Closing "<<it->sockFd<<" socket failed"<<std::endl;
+            std::cerr << font.at("REDF") <<"Closing "<<it->sockFd<<" socket failed" << font.at("RESETF") <<std::endl;
             continue;
         }
-        std::cout << "losed " << it->sockFd << " server socket" << std::endl;
+        std::cout << "Closed " << it->sockFd << " server socket" << std::endl;
     }
     maxFd = sockFd + 1;
     fileManager->removeFragmentedFiles();
