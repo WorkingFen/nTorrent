@@ -267,27 +267,11 @@ void Client::handleServerNoBlocksAvaliable(msg::Message msg)
 {
     // trzeba znowu wysłać żądanie o bloki
     int fileNameLength = msg.readInt();
-    std::string fileName = msg.readString(fileNameLength); 
-    int blockIndex = msg.readInt();
-    (void) fileNameLength;
-    (void) fileName;
-    (void) blockIndex;
+    std::string fileName = msg.readString(fileNameLength);
 
     if (console->getMessageState() == MessageState::wait_for_block_info) // jeśli czekaliśmy na to info
     {
-        std::vector<int> indexes;//to się wydaje niepotrzebne, skoro config jest pusty
-        try
-        {
-            indexes = fileManager->getIndexesFromConfig(fileName);
-        }
-        catch (const std::exception &e)
-        {
-            std::cerr << font.at("REDF") << e.what() << font.at("RESETF") << '\n';
-            return;
-        }
-        // timeout jakiś żeby nie wołać co sekundę?
-        // czyli flaga też podobna
-        sendAskForBlock(mainServerSocket, fileName,blocksPerRequest, indexes); // wysyła zapytanie o blok
+        fileManager->removeFileFromSeeds(fileName);
 
     }
 }
