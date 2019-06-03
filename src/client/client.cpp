@@ -745,9 +745,9 @@ void Client::disconnect()
 void Client::turnOff()
 {
     pthread_kill(signal_thread.native_handle(), SIGINT); // ubicie ewentualnego sigwaita
+    disconnect();
     signal_thread.join();
     keep_alive.join();
-    disconnect();
 }
 
 void Client::setFileDescrMask()
