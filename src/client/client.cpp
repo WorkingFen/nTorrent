@@ -13,6 +13,7 @@
 #include "headers/consoleInterface.hpp"
 
 using namespace msg;
+using namespace std::chrono_literals;
 
 Client::Client(const char ipAddr[15], const int& port, const char serverIpAddr[15], const int& serverPort) : maxFd(0), mainServerSocket(-1), timeout(20), blocksPerRequest(5), blocksPending(0), 
 console(std::unique_ptr<ConsoleInterface>(new ConsoleInterface)), fileManager(std::unique_ptr<FileManager>(new FileManager)), interruptedFlag(false), runStopFlag(false), keepAliveFlag(false)
@@ -768,16 +769,15 @@ void Client::setFileDescrMask()
 
 void Client::keepAliveThread()
 {
-    std::time_t keep_alive_timer = std::time(0);
     while(!interruptedFlag && !runStopFlag && console->getState() != State::down)
     {
+        std::this_thread::sleep_for(5s);    
+
         if(keepAliveFlag)
         {
-            if (std::time(0) - keep_alive_timer > 5) //keep_alive co 5s
             {
                 if (mainServerSocket != -1)
                     msg::Message(110).sendMessage(mainServerSocket);
-                keep_alive_timer = std::time(0);
             }
         }
         
