@@ -129,6 +129,8 @@ void server::Server::signal_waiter() {
 void server::Server::set_SIGmask() {
     sigemptyset(&signal_set);
     sigaddset(&signal_set, SIGINT);
+    sigaddset(&signal_set, SIGPIPE);
+
     int status = pthread_sigmask(SIG_BLOCK, &signal_set, NULL);
     if(status != 0)
         throw std::runtime_error("Setting signal mask failed");

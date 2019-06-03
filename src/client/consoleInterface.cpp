@@ -152,7 +152,7 @@ void Client::ConsoleInterface::fileDownload(Client &client, const std::vector<st
         chosenFile = input[1];                           // zapisanie wybranego pliku
     
         if(state == State::seeding) state = State::both;
-        if(state == State::connected) state = State::leeching;
+        if(state == State::connected) state = State::both;
     }
 }
 
