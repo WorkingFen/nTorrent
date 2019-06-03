@@ -7,6 +7,7 @@
 #include <string>
 #include <ctime>
 #include <fstream>
+#include <tuple>
 
 #include "headers/fileManager.hpp"
 #include "headers/consoleInterface.hpp"
@@ -69,11 +70,13 @@ void Client::connectTo(const struct sockaddr_in &address, int isServer)
     keepAliveFlag = true;
     std::cout << font.at("SKYF") << "Connected to sbd" << font.at("RESETF") << std::endl;
 
-    if (address.sin_addr.s_addr == server.sin_addr.s_addr)
+
+
+    if (std::tie(address.sin_addr.s_addr, address.sin_port) == std::tie(server.sin_addr.s_addr, server.sin_port))
         mainServerSocket = sock;
     else
     {
-        seederSockets.push_back(FileSocket(sock));
+        seederSockets.emplace_back(FileSocket(sock));
     }
 
     maxFd = std::max(maxFd, sock + 1);
