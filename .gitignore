@@ -35,6 +35,7 @@ runClient
 
 # VS Code files
 .vscode/
+*.code-workspace
 
 src/bin/
 src/output/
